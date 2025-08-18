@@ -217,6 +217,8 @@ def process_user_message(phone_number, message_body):
     if user_data["stage"] == "start":
         send_whatsapp_message(phone_number, WELCOME_MESSAGE)
         user_data["stage"] = "option_selected"
+        user_state[phone_number] = user_data
+        return
 
     elif user_data["stage"] == "option_selected":
         if message_body == "1":
