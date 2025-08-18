@@ -1,11 +1,13 @@
 # application.py
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_from_directory
 import requests
 import json
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
 import os
 import logging
+from icalendar import Calendar, Event, vCalAddress, vText
+import uuid
 
 # Configuración de logging
 logging.basicConfig(level=logging.INFO)
@@ -312,7 +314,7 @@ def process_user_message(phone_number, message_body):
             user_data["stage"] = "datos_paciente"
             send_whatsapp_message(phone_number, {
                 "type": "text",
-                "text": {"body": "Por favor, envía:\nNombre completo\nCorreo electrónico\nTeléfono\nFecha de nacimiento\nEdad"}
+                "text": {"body": "Por favor, envía:\nNombre completo\nCorreo electrónico\nTeléfono\nFecha de nacimiento\nEdad\n\n*Recuerda que también puedes enviarlo en una sola línea separado por comas."}
             })
         else:
             send_whatsapp_message(phone_number, {
@@ -342,7 +344,7 @@ def process_user_message(phone_number, message_body):
             user_data["stage"] = "datos_subsecuente"
             send_whatsapp_message(phone_number, {
                 "type": "text",
-                "text": {"body": "Por favor, envía:\nNombre completo\nCorreo electrónico\nTeléfono\nFecha de nacimiento\nEdad"}
+                "text": {"body": "Por favor, envía:\nNombre completo\nCorreo electrónico\nTeléfono\nFecha de nacimiento\nEdad\n\n*Recuerda que también puedes enviarlo en una sola línea separado por comas."}
             })
         elif message_body == "7":
             user_data["servicio"] = "7"
@@ -366,7 +368,7 @@ def process_user_message(phone_number, message_body):
             user_data["stage"] = "datos_subsecuente"
             send_whatsapp_message(phone_number, {
                 "type": "text",
-                "text": {"body": "Por favor, envía:\nNombre completo\nCorreo electrónico\nTeléfono\nFecha de nacimiento\nEdad"}
+                "text": {"body": "Por favor, envía:\nNombre completo\nCorreo electrónico\nTeléfono\nFecha de nacimiento\nEdad\n\n*Recuerda que también puedes enviarlo en una sola línea separado por comas."}
             })
 
     elif user_data["stage"] == "datos_subsecuente":
@@ -389,11 +391,53 @@ def process_user_message(phone_number, message_body):
             especialista = ESPECIALISTAS_NOMBRES.get(user_data["especialista"], "No definido")
             nombre_paciente = user_info.get('nombre', 'Paciente')
             servicio_nombre = SERVICIOS_NOMBRES.get(servicio, "Consulta")
+            
+            # ✅ Generar la duración y la fecha final de la cita
+            fecha_fin = fecha_hora + timedelta(minutes=duracion)
+            
+            # ✅ Crear el evento de calendario
+            cal = Calendar()
+            cal.add('prodid', '-//Milkiin Bot//Citas//ES')
+            cal.add('version', '2.0')
+            
+            event = Event()
+            event.add('summary', f'Cita de {servicio_nombre} con la Dra. {especialista}')
+            event.add('dtstart', fecha_hora)
+            event.add('dtend', fecha_fin)
+            event.add('dtstamp', datetime.now())
+            event.add('uid', str(uuid.uuid4()))
+            event.add('location', 'Insurgentes Sur 1160, 6º piso, Colonia Del Valle.')
+            event.add('description', f'Detalles de la cita:\nServicio: {servicio_nombre}\nPaciente: {nombre_paciente}\nTeléfono: {user_info.get("telefono", "N/A")}')
+            
+            organizer = vCalAddress('mailto:milkiin.gine@gmail.com')
+            organizer.params['cn'] = vText('Milkiin')
+            event['organizer'] = organizer
+            
+            attendee = vCalAddress(f'mailto:{user_info.get("correo", "N/A")}')
+            attendee.params['cn'] = vText(nombre_paciente)
+            attendee.params['partstat'] = 'NEEDS-ACTION'
+            attendee.params['role'] = 'REQ-PARTICIPANT'
+            event.add('attendee', attendee)
+            
+            cal.add_component(event)
+            
+            # ✅ Guardar el archivo .ics en un directorio temporal
+            temp_dir = os.path.join(os.getcwd(), 'temp_ics')
+            if not os.path.exists(temp_dir):
+                os.makedirs(temp_dir)
+            
+            event_id = event['uid']
+            file_path = os.path.join(temp_dir, f'cita_{event_id}.ics')
+            
+            with open(file_path, 'wb') as f:
+                f.write(cal.to_ical())
+                
+            # ✅ Enviar mensajes de confirmación con el enlace de descarga
             send_whatsapp_message(phone_number, CONFIRMACION)
             cita_detalle = {
                 "type": "text",
                 "text": {
-                    "body": f"📅 CONFIRMACIÓN DE CITA\n\nPaciente: {nombre_paciente}\nServicio: {servicio_nombre}\nEspecialista: {especialista}\nFecha y hora: {message_body}\nDuración estimada: {duracion} minutos"
+                    "body": f"📅 CONFIRMACIÓN DE CITA\n\nPaciente: {nombre_paciente}\nServicio: {servicio_nombre}\nEspecialista: {especialista}\nFecha y hora: {message_body}\nDuración estimada: {duracion} minutos\n\n🗓️ Agrega la cita a tu calendario: {request.url_root.rstrip('/')}/download/{event_id}"
                 }
             }
             send_whatsapp_message(phone_number, cita_detalle)
@@ -412,11 +456,53 @@ def process_user_message(phone_number, message_body):
             especialista = ESPECIALISTAS_NOMBRES.get("1", "Dra. Mónica Olavarría")
             nombre_paciente = user_info.get('nombre', 'Paciente')
             servicio_nombre = SERVICIOS_SUB_NOMBRES.get(servicio, "Consulta")
+            
+            # ✅ Generar la duración y la fecha final de la cita
+            fecha_fin = fecha_hora + timedelta(minutes=duracion)
+            
+            # ✅ Crear el evento de calendario
+            cal = Calendar()
+            cal.add('prodid', '-//Milkiin Bot//Citas//ES')
+            cal.add('version', '2.0')
+            
+            event = Event()
+            event.add('summary', f'Cita de {servicio_nombre} con la Dra. {especialista}')
+            event.add('dtstart', fecha_hora)
+            event.add('dtend', fecha_fin)
+            event.add('dtstamp', datetime.now())
+            event.add('uid', str(uuid.uuid4()))
+            event.add('location', 'Insurgentes Sur 1160, 6º piso, Colonia Del Valle.')
+            event.add('description', f'Detalles de la cita:\nServicio: {servicio_nombre}\nPaciente: {nombre_paciente}\nTeléfono: {user_info.get("telefono", "N/A")}')
+            
+            organizer = vCalAddress('mailto:milkiin.gine@gmail.com')
+            organizer.params['cn'] = vText('Milkiin')
+            event['organizer'] = organizer
+            
+            attendee = vCalAddress(f'mailto:{user_info.get("correo", "N/A")}')
+            attendee.params['cn'] = vText(nombre_paciente)
+            attendee.params['partstat'] = 'NEEDS-ACTION'
+            attendee.params['role'] = 'REQ-PARTICIPANT'
+            event.add('attendee', attendee)
+            
+            cal.add_component(event)
+            
+            # ✅ Guardar el archivo .ics en un directorio temporal
+            temp_dir = os.path.join(os.getcwd(), 'temp_ics')
+            if not os.path.exists(temp_dir):
+                os.makedirs(temp_dir)
+            
+            event_id = event['uid']
+            file_path = os.path.join(temp_dir, f'cita_{event_id}.ics')
+            
+            with open(file_path, 'wb') as f:
+                f.write(cal.to_ical())
+                
+            # ✅ Enviar mensajes de confirmación con el enlace de descarga
             send_whatsapp_message(phone_number, CONFIRMACION)
             cita_detalle = {
                 "type": "text",
                 "text": {
-                    "body": f"📅 CONFIRMACIÓN DE CITA\n\nPaciente: {nombre_paciente}\nServicio: {servicio_nombre}\nEspecialista: {especialista}\nFecha y hora: {message_body}\nDuración estimada: {duracion} minutos"
+                    "body": f"📅 CONFIRMACIÓN DE CITA\n\nPaciente: {nombre_paciente}\nServicio: {servicio_nombre}\nEspecialista: {especialista}\nFecha y hora: {message_body}\nDuración estimada: {duracion} minutos\n\n🗓️ Agrega la cita a tu calendario: {request.url_root.rstrip('/')}/download/{event_id}"
                 }
             }
             send_whatsapp_message(phone_number, cita_detalle)
@@ -442,7 +528,7 @@ def process_user_message(phone_number, message_body):
         if message_body == "1":
             send_whatsapp_message(phone_number, {
                 "type": "text",
-                "text": {"body": "Por favor, completa el formulario:\n🔗 [Formulario de facturación](https://forms.gle/tuformulario)"}
+                "text": {"body": "Por favor, completa el formulario:\n🔗 [Formulario de facturación](https://docs.google.com/forms/d/e/1FAIpQLSfr1WWXWQGx4sZj3_0FnIp6XWBb1mol4GfVGfymflsRI0E5pA/viewform)"}
             })
         elif message_body == "2":
             send_whatsapp_message(phone_number, {
@@ -525,6 +611,16 @@ def home():
 @application.route('/test/')
 def test():
     return jsonify({"status": "ok", "message": "Ruta /test/ funciona correctamente"})
+
+
+# ✅ Nueva ruta para servir archivos de calendario
+@application.route('/download/<string:event_id>')
+def download_ics(event_id):
+    ics_file_path = os.path.join(os.getcwd(), 'temp_ics')
+    try:
+        return send_from_directory(ics_file_path, f'cita_{event_id}.ics', as_attachment=True, mimetype='text/calendar')
+    except FileNotFoundError:
+        return "El archivo de calendario no se encontró. Es posible que haya expirado o haya sido eliminado.", 404
 
 
 # Manejador de rutas no encontradas
