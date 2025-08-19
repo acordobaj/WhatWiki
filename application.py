@@ -83,7 +83,7 @@ COSTOS = {
 CONFIRMACION = {
     "type": "text",
     "text": {
-        "body": "✅ ¡Gracias por agendar tu cita con Milkiin!\n\n📍 Te esperamos en: Insurgentes Sur 1160, 6º piso, Colonia Del Valle. \n🗺️ [Ubicación en Google Maps](https://www.google.com/maps/place/Milkiin+Cl%C3%ADnica+de+Fertilidad+y+Ginecolog%C3%ADa/@19.399996,-99.1677353,17z/data=!3m1!4b1!4m6!3m5!1s0x85d1ff389d316335:0x1b4b62f4476a88b8!8m2!3d19.399991!4d-99.1651604!16s%2Fg%2F11c6k7d36j)\n\n💳 Aceptamos pagos con tarjeta (incluyendo AMEX) y en efectivo.\n\n⏰ En caso de cancelación, es necesario avisar con mínimo 72 horas de anticipación para poder realizar el reembolso del anticipo y reprogramar tu cita. Si no se cumple con este plazo, lamentablemente no podremos hacer el reembolso.\n\nAgradecemos tu comprensión y tu confianza. Estamos para acompañarte con profesionalismo y cariño en cada paso ❤️. Si tienes alguna duda o necesitas apoyo adicional, no dudes en escribirnos."
+        "body": "✅ ¡Gracias por agendar tu cita con Milkiin!\n\n📍 Te esperamos en: Insurgentes Sur 1160, 6º piso, Colonia Del Valle. \n🗺️ [Ubicación en Google Maps](https://maps.app.goo.gl/VfWbVgwHLQrZPNrNA)\n\n💳 Aceptamos pagos con tarjeta (incluyendo AMEX) y en efectivo.\n\n⏰ En caso de cancelación, es necesario avisar con mínimo 72 horas de anticipación para poder realizar el reembolso del anticipo y reprogramar tu cita. Si no se cumple con este plazo, lamentablemente no podremos hacer el reembolso.\n\nAgradecemos tu comprensión y tu confianza. Estamos para acompañarte con profesionalismo y cariño en cada paso ❤️. Si tienes alguna duda o necesitas apoyo adicional, no dudes en escribirnos."
     }
 }
 
@@ -391,7 +391,7 @@ def process_user_message(phone_number, message_body):
             cita_detalle = {
                 "type": "text",
                 "text": {
-                    "body": f"📅 CONFIRMACIÓN DE CITA\n\nPaciente: {nombre_paciente}\nServicio: {servicio_nombre}\nEspecialista: {especialista}\nFecha y hora: {message_body}\nDuración estimada: {duracion} minutos"
+                    "body": f"📅 CONFIRMACIÓN DE CITA\n\nServicio: {servicio_nombre}\nEspecialista: {especialista}\nFecha y hora: {message_body}\nDuración estimada: {duracion} minutos"
                 }
             }
             send_whatsapp_message(phone_number, cita_detalle)
@@ -422,7 +422,7 @@ def process_user_message(phone_number, message_body):
             cita_detalle = {
                 "type": "text",
                 "text": {
-                    "body": f"📅 CONFIRMACIÓN DE CITA\n\nPaciente: {nombre_paciente}\nServicio: {servicio_nombre}\nEspecialista: {especialista}\nFecha y hora: {message_body}\nDuración estimada: {duracion} minutos"
+                    "body": f"📅 CONFIRMACIÓN DE CITA\n\nServicio: {servicio_nombre}\nEspecialista: {especialista}\nFecha y hora: {message_body}\nDuración estimada: {duracion} minutos"
                 }
             }
             send_whatsapp_message(phone_number, cita_detalle)
