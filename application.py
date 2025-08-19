@@ -677,7 +677,7 @@ def process_user_message(phone_number, message_body):
 
 # === WEBHOOKS DE META ===
 
-@application.route('/webhook/', methods=['GET', 'POST'])
+@application.route('/webhook', methods=['GET', 'POST'])
 def webhook():
     """Webhook para recibir mensajes de WhatsApp Meta API"""
     if request.method == 'GET':
