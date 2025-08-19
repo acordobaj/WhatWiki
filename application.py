@@ -2,8 +2,13 @@ from flask import Flask, request, jsonify
 import requests
 import json
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
 import os
+
+# Importaciones para Google Calendar API
+from google.oauth2 import service_account
+from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
 
 # Crear la aplicación Flask (cambiar 'app' por 'application' para Passenger)
 application = Flask(__name__)
@@ -12,6 +17,32 @@ application = Flask(__name__)
 META_ACCESS_TOKEN = os.environ.get('META_ACCESS_TOKEN') or 'temporal_token_placeholder'
 META_PHONE_NUMBER_ID = os.environ.get('META_PHONE_NUMBER_ID') or '123456789012345'
 META_VERIFY_TOKEN = os.environ.get('META_VERIFY_TOKEN') or 'milkiin_verify_token_2024'
+
+# Variables para Google Calendar
+# El contenido del JSON de la cuenta de servicio debe estar en una sola línea en las variables de entorno de Render
+GOOGLE_CALENDAR_CREDENTIALS_JSON = os.environ.get('GOOGLE_CALENDAR_CREDENTIALS')
+GOOGLE_CALENDAR_ID = os.environ.get('GOOGLE_CALENDAR_ID')
+
+# Scopes de la API para Google Calendar
+SCOPES = ['https://www.googleapis.com/auth/calendar.events']
+
+# === AUTENTICACIÓN Y SERVICIO DE CALENDAR ===
+def get_calendar_service():
+    """
+    Inicializa el servicio de Google Calendar usando las credenciales de la cuenta de servicio.
+    """
+    try:
+        # Cargamos las credenciales del JSON de la variable de entorno
+        info = json.loads(GOOGLE_CALENDAR_CREDENTIALS_JSON)
+        credentials = service_account.Credentials.from_service_account_info(
+            info,
+            scopes=SCOPES
+        )
+        service = build('calendar', 'v3', credentials=credentials)
+        return service
+    except (json.JSONDecodeError, HttpError) as e:
+        print(f"❌ Error al inicializar el servicio de Google Calendar: {e}")
+        return None
 
 # === ESTADO DE CONVERSACIÓN ===
 user_state = {}
@@ -120,7 +151,7 @@ DURACIONES_PRIMERA_VEZ = {
     "2": 60,  # SOP
     "3": 60,  # Chequeo Anual
     "4": 60,  # Embarazo
-    "5": 30   # Otros
+    "5": 30  # Otros
 }
 
 DURACIONES_SUBSECUENTE = {
@@ -130,7 +161,7 @@ DURACIONES_SUBSECUENTE = {
     "4": 45,  # Embarazo
     "5": 30,  # Revisión de estudios
     "6": 30,  # Seguimiento folicular
-    "7": 30   # Otros
+    "7": 30  # Otros
 }
 
 # === FUNCIONES PARA WHATSAPP META API ===
@@ -328,8 +359,6 @@ def process_user_message(phone_number, message_body):
             "type": "text",
             "text": {"body": "Por favor, envía la fecha y hora que prefieras (ej: 2025-04-05 10:00)"}
         })
-        # ======================================================
-
         user_data["stage"] = "esperando_fecha"
     
     # === SUBSECUENTE ===
@@ -383,14 +412,25 @@ def process_user_message(phone_number, message_body):
     # === AGENDAR CITA (PRIMERA VEZ) ===
     elif user_data["stage"] == "esperando_fecha":
         try:
-            fecha_hora = datetime.strptime(message_body.strip(), "%Y-%m-%d %H:%M")
+            fecha_hora_str = message_body.strip()
+            fecha_hora = datetime.strptime(fecha_hora_str, "%Y-%m-%d %H:%M")
             
-            servicio = user_data["servicio"]
-            duracion = DURACIONES_PRIMERA_VEZ.get(servicio, 60)
-            especialista = ESPECIALISTAS_NOMBRES.get(user_data["especialista"], "No definido")
-            nombre_paciente = user_info.get('nombre', 'Paciente')
-            servicio_nombre = SERVICIOS_NOMBRES.get(servicio, "Consulta")
+            # Obtener datos de la cita
+            servicio_key = user_data.get("servicio", "1")
+            duracion = DURACIONES_PRIMERA_VEZ.get(servicio_key, 60)
+            servicio_nombre = SERVICIOS_NOMBRES.get(servicio_key, "Consulta")
+            especialista_key = user_data.get("especialista", "1")
+            especialista_nombre = ESPECIALISTAS_NOMBRES.get(especialista_key, "No definido")
+            nombre_paciente = user_info.get('nombre', 'Paciente Anónimo')
             
+            # Crear evento en Google Calendar
+            crear_evento_google_calendar(
+                resumen=f"Cita - {servicio_nombre} con {especialista_nombre}",
+                inicio=fecha_hora,
+                duracion_minutos=duracion,
+                descripcion=f"Paciente: {nombre_paciente}\nTeléfono: {phone_number}\nServicio: {servicio_nombre}\nEspecialista: {especialista_nombre}"
+            )
+
             # Enviar confirmación
             send_whatsapp_message(phone_number, CONFIRMACION)
             
@@ -398,12 +438,14 @@ def process_user_message(phone_number, message_body):
             cita_detalle = {
                 "type": "text",
                 "text": {
-                    "body": f"📅 CONFIRMACIÓN DE CITA\n\nServicio: {servicio_nombre}\nEspecialista: {especialista}\nFecha y hora: {message_body}\nDuración estimada: {duracion} minutos"
+                    "body": f"📅 CONFIRMACIÓN DE CITA\n\nServicio: {servicio_nombre}\nEspecialista: {especialista_nombre}\nFecha y hora: {fecha_hora_str}\nDuración estimada: {duracion} minutos"
                 }
             }
             send_whatsapp_message(phone_number, cita_detalle)
             
-            user_data["stage"] = "start"
+            # Limpiar estado del usuario
+            del user_state[phone_number]
+            del user_data_storage[phone_number]
             
         except ValueError:
             send_whatsapp_message(phone_number, {
@@ -414,13 +456,22 @@ def process_user_message(phone_number, message_body):
     # === AGENDAR CITA (SUBSECUENTE) ===
     elif user_data["stage"] == "esperando_fecha_sub":
         try:
-            fecha_hora = datetime.strptime(message_body.strip(), "%Y-%m-%d %H:%M")
+            fecha_hora_str = message_body.strip()
+            fecha_hora = datetime.strptime(fecha_hora_str, "%Y-%m-%d %H:%M")
             
-            servicio = user_data["servicio"]
-            duracion = DURACIONES_SUBSECUENTE.get(servicio, 45)
-            especialista = ESPECIALISTAS_NOMBRES.get("1", "Dra. Mónica Olavarría")
-            nombre_paciente = user_info.get('nombre', 'Paciente')
-            servicio_nombre = SERVICIOS_SUB_NOMBRES.get(servicio, "Consulta")
+            # Obtener datos de la cita
+            servicio_key = user_data.get("servicio", "1")
+            duracion = DURACIONES_SUBSECUENTE.get(servicio_key, 45)
+            servicio_nombre = SERVICIOS_SUB_NOMBRES.get(servicio_key, "Consulta")
+            nombre_paciente = user_info.get('nombre', 'Paciente Anónimo')
+            
+            # Crear evento en Google Calendar
+            crear_evento_google_calendar(
+                resumen=f"Cita - {servicio_nombre} (Subsecuente)",
+                inicio=fecha_hora,
+                duracion_minutos=duracion,
+                descripcion=f"Paciente: {nombre_paciente}\nTeléfono: {phone_number}\nServicio: {servicio_nombre}"
+            )
             
             # Enviar confirmación
             send_whatsapp_message(phone_number, CONFIRMACION)
@@ -429,12 +480,14 @@ def process_user_message(phone_number, message_body):
             cita_detalle = {
                 "type": "text",
                 "text": {
-                    "body": f"📅 CONFIRMACIÓN DE CITA\n\nServicio: {servicio_nombre}\nEspecialista: {especialista}\nFecha y hora: {message_body}\nDuración estimada: {duracion} minutos"
+                    "body": f"📅 CONFIRMACIÓN DE CITA\n\nServicio: {servicio_nombre}\nFecha y hora: {fecha_hora_str}\nDuración estimada: {duracion} minutos"
                 }
             }
             send_whatsapp_message(phone_number, cita_detalle)
             
-            user_data["stage"] = "start"
+            # Limpiar estado del usuario
+            del user_state[phone_number]
+            del user_data_storage[phone_number]
             
         except ValueError:
             send_whatsapp_message(phone_number, {
@@ -485,6 +538,50 @@ def process_user_message(phone_number, message_body):
     
     # Guardar estado
     user_state[phone_number] = user_data
+
+# === FUNCIONES PARA GOOGLE CALENDAR ===
+def crear_evento_google_calendar(resumen, inicio, duracion_minutos, descripcion):
+    """
+    Crea un evento en el calendario de Google.
+    :param resumen: Título del evento.
+    :param inicio: Objeto datetime para la hora de inicio.
+    :param duracion_minutos: Duración del evento en minutos.
+    :param descripcion: Descripción del evento.
+    :return: URL del evento creado o None si hay un error.
+    """
+    try:
+        service = get_calendar_service()
+        if not service:
+            return None
+        
+        # Calcular la hora de finalización
+        fin = inicio + timedelta(minutes=duracion_minutos)
+        
+        event = {
+            'summary': resumen,
+            'description': descripcion,
+            'start': {
+                'dateTime': inicio.isoformat(),
+                'timeZone': 'America/Mexico_City',
+            },
+            'end': {
+                'dateTime': fin.isoformat(),
+                'timeZone': 'America/Mexico_City',
+            },
+            'attendees': [
+                {'email': GOOGLE_CALENDAR_ID},
+            ],
+        }
+        
+        event = service.events().insert(calendarId=GOOGLE_CALENDAR_ID, body=event).execute()
+        print(f"✅ Evento de Google Calendar creado: {event.get('htmlLink')}")
+        return event.get('htmlLink')
+    except HttpError as error:
+        print(f"❌ Error al crear evento de Google Calendar: {error}")
+        return None
+    except Exception as e:
+        print(f"❌ Error desconocido al crear evento de Google Calendar: {e}")
+        return None
 
 # === WEBHOOKS DE META ===
 
