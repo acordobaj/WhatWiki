@@ -154,21 +154,21 @@ SERVICIOS_SUB_NOMBRES = {
 
 # DURACIONES (en minutos)
 DURACIONES_PRIMERA_VEZ = {
-    "1": 90, 	# Fertilidad
-    "2": 60, 	# SOP
-    "3": 60, 	# Chequeo Anual
-    "4": 60, 	# Embarazo
-    "5": 30 	# Otros
+    "1": 90,     # Fertilidad
+    "2": 60,     # SOP
+    "3": 60,     # Chequeo Anual
+    "4": 60,     # Embarazo
+    "5": 30      # Otros
 }
 
 DURACIONES_SUBSECUENTE = {
-    "1": 45, 	# Fertilidad
-    "2": 45, 	# SOP
-    "3": 45, 	# Chequeo Anual
-    "4": 45, 	# Embarazo
-    "5": 30, 	# Revisión de estudios
-    "6": 30, 	# Seguimiento folicular
-    "7": 30 	# Otros
+    "1": 45,     # Fertilidad
+    "2": 45,     # SOP
+    "3": 45,     # Chequeo Anual
+    "4": 45,     # Embarazo
+    "5": 30,     # Revisión de estudios
+    "6": 30,     # Seguimiento folicular
+    "7": 30      # Otros
 }
 
 # === FUNCIONES PARA WHATSAPP META API ===
@@ -229,10 +229,11 @@ def extract_user_data(message_body):
     for line in lines:
         if 'nombre' in line.lower() or 'paciente' in line.lower():
             data['nombre'] = line.split(':', 1)[1].strip() if ':' in line else line
-        elif '@' in line and '.' in line:
-            match = re.search(r'[\w\.-]+@[\w\.-]+\.\w+', line)
-            if match:
-                data['correo'] = match.group(0)
+        # Se elimina la extracción de correo de aquí para pedirlo por separado
+        # elif '@' in line and '.' in line:
+        #     match = re.search(r'[\w\.-]+@[\w\.-]+\.\w+', line)
+        #     if match:
+        #         data['correo'] = match.group(0)
         elif re.search(r'\d{10,}', line):
             phone_match = re.search(r'\d{10,}', line)
             if phone_match:
@@ -308,26 +309,26 @@ def send_appointment_email(recipient_email, patient_name, doctor_name, appointme
     """
     html = f"""
     <html>
-        <body>
-            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
-                <h2 style="color: #4CAF50;">✅ Cita Confirmada</h2>
-                <p>Hola <strong>{patient_name}</strong>,</p>
-                <p>Tu cita con la <strong>Dra. {doctor_name}</strong> ha sido agendada con éxito.</p>
-                <p>Aquí están los detalles de tu cita:</p>
-                <ul>
-                    <li><strong>Fecha:</strong> {appointment_date}</li>
-                    <li><strong>Hora:</strong> {appointment_time}</li>
-                </ul>
-                <p>¡Esperamos verte pronto!</p>
-                <p>Si necesitas reagendar o tienes alguna pregunta, por favor contáctanos.</p>
-                <p style="margin-top: 30px;">
-                    Saludos cordiales,<br>
-                    El equipo de Milkiin
-                </p>
-                <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
-                <p style="font-size: 12px; color: #999;">Este es un mensaje automático, por favor no lo respondas directamente si no es para dudas sobre tu cita.</p>
-            </div>
-        </body>
+      <body>
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
+          <h2 style="color: #4CAF50;">✅ Cita Confirmada</h2>
+          <p>Hola <strong>{patient_name}</strong>,</p>
+          <p>Tu cita con la <strong>Dra. {doctor_name}</strong> ha sido agendada con éxito.</p>
+          <p>Aquí están los detalles de tu cita:</p>
+          <ul>
+            <li><strong>Fecha:</strong> {appointment_date}</li>
+            <li><strong>Hora:</strong> {appointment_time}</li>
+          </ul>
+          <p>¡Esperamos verte pronto!</p>
+          <p>Si necesitas reagendar o tienes alguna pregunta, por favor contáctanos.</p>
+          <p style="margin-top: 30px;">
+            Saludos cordiales,<br>
+            El equipo de Milkiin
+          </p>
+          <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
+          <p style="font-size: 12px; color: #999;">Este es un mensaje automático, por favor no lo respondas directamente si no es para dudas sobre tu cita.</p>
+        </div>
+      </body>
     </html>
     """
     part1 = MIMEText(text, "plain")
@@ -433,10 +434,11 @@ def process_user_message(phone_number, message_body):
     elif user_data["stage"] == "especialista":
         if message_body in ["1", "2", "3", "4", "5"]:
             user_data["especialista"] = message_body
-            user_data["stage"] = "datos_paciente"
+            # 💡 Corrección: pedir datos sin el correo en un solo bloque
+            user_data["stage"] = "pedir_datos_sin_correo" 
             send_whatsapp_message(phone_number, {
                 "type": "text",
-                "text": {"body": "Por favor, envía:\nNombre completo\nCorreo electrónico\nTeléfono\nFecha de nacimiento\nEdad"}
+                "text": {"body": "Por favor, envía:\nNombre completo\nTeléfono\nFecha de nacimiento\nEdad"}
             })
         else:
             send_whatsapp_message(phone_number, {
@@ -444,27 +446,48 @@ def process_user_message(phone_number, message_body):
                 "text": {"body": "Por favor, elige una opción válida (1-5)."}
             })
     
-    elif user_data["stage"] == "datos_paciente":
+    # 💡 Corrección: nueva etapa para procesar los datos del usuario
+    elif user_data["stage"] == "pedir_datos_sin_correo":
         extracted_data = extract_user_data(message_body)
         user_info.update(extracted_data)
         user_data_storage[phone_number] = user_info
         
-        user_data["stage"] = "mostrar_horarios"
-        send_whatsapp_message(phone_number, HORARIOS_PRIMERA_VEZ)
-        
-        pago_info = {
-            "type": "text",
-            "text": {
-                "body": "Te compartimos una información importante: 📌 Para consultas de primera vez, solicitamos un anticipo de $500 MXN. El monto restante se cubrirá el día de tu consulta, una vez finalizada. Esta medida nos permite asegurar tu lugar, ya que contamos con alta demanda.\n\nFavor de enviar su comprobante de pago al correo: milkiin.gine@gmail.com\n\nDatos para pago:\nBanco: BBVA\nCuenta: 048 482 8712\nCLABE: 012180004848287122"
-            }
-        }
-        send_whatsapp_message(phone_number, pago_info)
-        
+        # 💡 Corrección: siguiente etapa para pedir el correo
+        user_data["stage"] = "esperando_correo" 
         send_whatsapp_message(phone_number, {
             "type": "text",
-            "text": {"body": "Por favor, envía la fecha y hora que prefieras (ej: 2025-04-05 10:00)"}
+            "text": {"body": "Gracias. Ahora, por favor, envíanos tu correo electrónico para enviarte la confirmación."}
         })
-        user_data["stage"] = "esperando_fecha"
+    
+    # 💡 Corrección: nueva etapa para capturar el correo electrónico
+    elif user_data["stage"] == "esperando_correo":
+        email_match = re.search(r'[\w\.-]+@[\w\.-]+\.\w+', message_body)
+        if email_match:
+            user_info["correo"] = email_match.group(0) # Guarda el correo
+            user_data_storage[phone_number] = user_info
+            
+            user_data["stage"] = "mostrar_horarios"
+            send_whatsapp_message(phone_number, HORARIOS_PRIMERA_VEZ)
+            
+            pago_info = {
+                "type": "text",
+                "text": {
+                    "body": "Te compartimos una información importante: 📌 Para consultas de primera vez, solicitamos un anticipo de $500 MXN. El monto restante se cubrirá el día de tu consulta, una vez finalizada. Esta medida nos permite asegurar tu lugar, ya que contamos con alta demanda.\n\nFavor de enviar su comprobante de pago al correo: milkiin.gine@gmail.com\n\nDatos para pago:\nBanco: BBVA\nCuenta: 048 482 8712\nCLABE: 012180004848287122"
+                }
+            }
+            send_whatsapp_message(phone_number, pago_info)
+            
+            send_whatsapp_message(phone_number, {
+                "type": "text",
+                "text": {"body": "Por favor, envía la fecha y hora que prefieras (ej: 2025-04-05 10:00)"}
+            })
+            user_data["stage"] = "esperando_fecha"
+            
+        else:
+            send_whatsapp_message(phone_number, {
+                "type": "text",
+                "text": {"body": "El formato del correo es incorrecto. Por favor, inténtalo de nuevo."}
+            })
     
     # === SUBSECUENTE ===
     elif user_data["stage"] == "servicio_subsecuente":
