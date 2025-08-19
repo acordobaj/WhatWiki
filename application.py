@@ -386,35 +386,27 @@ def process_user_message(phone_number, message_body):
             servicio = user_data["servicio"]
             duracion = DURACIONES_PRIMERA_VEZ.get(servicio, 60)
             especialista = ESPECIALISTAS_NOMBRES.get(user_data["especialista"], "No definido")
-            nombre_paciente = user_info.get('nombre', 'Paciente')
-            servicio_nombre = SERVICIOS_NOMBRES.get(servicio, "Consulta")
             
             # ✅ Generar la duración y la fecha final de la cita
             fecha_fin = fecha_hora + timedelta(minutes=duracion)
             
-            # ✅ Crear el evento de calendario
+            # ✅ Crear el evento de calendario (sin datos del cliente)
             cal = Calendar()
             cal.add('prodid', '-//Milkiin Bot//Citas//ES')
             cal.add('version', '2.0')
             
             event = Event()
-            event.add('summary', f'Cita de {servicio_nombre} con la Dra. {especialista}')
+            event.add('summary', f'Cita de {SERVICIOS_NOMBRES.get(servicio, "Consulta")} con la Dra. {especialista}')
             event.add('dtstart', fecha_hora)
             event.add('dtend', fecha_fin)
             event.add('dtstamp', datetime.now())
             event.add('uid', str(uuid.uuid4()))
             event.add('location', 'Insurgentes Sur 1160, 6º piso, Colonia Del Valle.')
-            event.add('description', f'Detalles de la cita:\nServicio: {servicio_nombre}\nPaciente: {nombre_paciente}\nTeléfono: {user_info.get("telefono", "N/A")}')
+            event.add('description', f'Detalles de la cita:\nServicio: {SERVICIOS_NOMBRES.get(servicio, "Consulta")}\nEspecialista: {especialista}')
             
             organizer = vCalAddress('mailto:milkiin.gine@gmail.com')
             organizer.params['cn'] = vText('Milkiin')
             event['organizer'] = organizer
-            
-            attendee = vCalAddress(f'mailto:{user_info.get("correo", "N/A")}')
-            attendee.params['cn'] = vText(nombre_paciente)
-            attendee.params['partstat'] = 'NEEDS-ACTION'
-            attendee.params['role'] = 'REQ-PARTICIPANT'
-            event.add('attendee', attendee)
             
             cal.add_component(event)
             
@@ -429,12 +421,12 @@ def process_user_message(phone_number, message_body):
             with open(file_path, 'wb') as f:
                 f.write(cal.to_ical())
                 
-            # ✅ Enviar mensajes de confirmación con el enlace de descarga
+            # ✅ Enviar mensajes de confirmación con el enlace de descarga (sin nombre del cliente)
             send_whatsapp_message(phone_number, CONFIRMACION)
             cita_detalle = {
                 "type": "text",
                 "text": {
-                    "body": f"📅 CONFIRMACIÓN DE CITA\n\nPaciente: {nombre_paciente}\nServicio: {servicio_nombre}\nEspecialista: {especialista}\nFecha y hora: {message_body}\nDuración estimada: {duracion} minutos\n\n🗓️ Agrega la cita a tu calendario: {request.url_root.rstrip('/')}/download/{event_id}"
+                    "body": f"📅 CONFIRMACIÓN DE CITA\n\nServicio: {SERVICIOS_NOMBRES.get(servicio, 'Consulta')}\nEspecialista: {especialista}\nFecha y hora: {message_body}\nDuración estimada: {duracion} minutos\n\n🗓️ Agrega la cita a tu calendario: {request.url_root.rstrip('/')}/download/{event_id}"
                 }
             }
             send_whatsapp_message(phone_number, cita_detalle)
@@ -451,35 +443,27 @@ def process_user_message(phone_number, message_body):
             servicio = user_data["servicio"]
             duracion = DURACIONES_SUBSECUENTE.get(servicio, 45)
             especialista = ESPECIALISTAS_NOMBRES.get("1", "Dra. Mónica Olavarría")
-            nombre_paciente = user_info.get('nombre', 'Paciente')
-            servicio_nombre = SERVICIOS_SUB_NOMBRES.get(servicio, "Consulta")
             
             # ✅ Generar la duración y la fecha final de la cita
             fecha_fin = fecha_hora + timedelta(minutes=duracion)
             
-            # ✅ Crear el evento de calendario
+            # ✅ Crear el evento de calendario (sin datos del cliente)
             cal = Calendar()
             cal.add('prodid', '-//Milkiin Bot//Citas//ES')
             cal.add('version', '2.0')
             
             event = Event()
-            event.add('summary', f'Cita de {servicio_nombre} con la Dra. {especialista}')
+            event.add('summary', f'Cita de {SERVICIOS_SUB_NOMBRES.get(servicio, "Consulta")} con la Dra. {especialista}')
             event.add('dtstart', fecha_hora)
             event.add('dtend', fecha_fin)
             event.add('dtstamp', datetime.now())
             event.add('uid', str(uuid.uuid4()))
             event.add('location', 'Insurgentes Sur 1160, 6º piso, Colonia Del Valle.')
-            event.add('description', f'Detalles de la cita:\nServicio: {servicio_nombre}\nPaciente: {nombre_paciente}\nTeléfono: {user_info.get("telefono", "N/A")}')
+            event.add('description', f'Detalles de la cita:\nServicio: {SERVICIOS_SUB_NOMBRES.get(servicio, "Consulta")}\nEspecialista: {especialista}')
             
             organizer = vCalAddress('mailto:milkiin.gine@gmail.com')
             organizer.params['cn'] = vText('Milkiin')
             event['organizer'] = organizer
-            
-            attendee = vCalAddress(f'mailto:{user_info.get("correo", "N/A")}')
-            attendee.params['cn'] = vText(nombre_paciente)
-            attendee.params['partstat'] = 'NEEDS-ACTION'
-            attendee.params['role'] = 'REQ-PARTICIPANT'
-            event.add('attendee', attendee)
             
             cal.add_component(event)
             
@@ -494,12 +478,12 @@ def process_user_message(phone_number, message_body):
             with open(file_path, 'wb') as f:
                 f.write(cal.to_ical())
                 
-            # ✅ Enviar mensajes de confirmación con el enlace de descarga
+            # ✅ Enviar mensajes de confirmación con el enlace de descarga (sin nombre del cliente)
             send_whatsapp_message(phone_number, CONFIRMACION)
             cita_detalle = {
                 "type": "text",
                 "text": {
-                    "body": f"📅 CONFIRMACIÓN DE CITA\n\nPaciente: {nombre_paciente}\nServicio: {servicio_nombre}\nEspecialista: {especialista}\nFecha y hora: {message_body}\nDuración estimada: {duracion} minutos\n\n🗓️ Agrega la cita a tu calendario: {request.url_root.rstrip('/')}/download/{event_id}"
+                    "body": f"📅 CONFIRMACIÓN DE CITA\n\nServicio: {SERVICIOS_SUB_NOMBRES.get(servicio, 'Consulta')}\nEspecialista: {especialista}\nFecha y hora: {message_body}\nDuración estimada: {duracion} minutos\n\n🗓️ Agrega la cita a tu calendario: {request.url_root.rstrip('/')}/download/{event_id}"
                 }
             }
             send_whatsapp_message(phone_number, cita_detalle)
