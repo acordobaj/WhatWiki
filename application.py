@@ -323,6 +323,13 @@ def process_user_message(phone_number, message_body):
         }
         send_whatsapp_message(phone_number, pago_info)
         
+        # === AÑADIDO: Instrucción para enviar fecha y hora ===
+        send_whatsapp_message(phone_number, {
+            "type": "text",
+            "text": {"body": "Por favor, envía la fecha y hora que prefieras (ej: 2025-04-05 10:00)"}
+        })
+        # ======================================================
+
         user_data["stage"] = "esperando_fecha"
     
     # === SUBSECUENTE ===
