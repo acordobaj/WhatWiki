@@ -1,6 +1,6 @@
 Flask==2.3.3
 requests==2.31.0
-icalendar==5.0.12
-gunicorn
-google-auth
-google-api-python-client
+google-api-python-client==2.100.0
+google-auth==2.23.0
+python-ics==0.8.1
+pytz

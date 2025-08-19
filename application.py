@@ -14,6 +14,11 @@ from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
+# Importaciones para iCalendar (.ics)
+from ics import Calendar, Event as IcsEvent
+import tempfile
+import os
+
 # Crear la aplicación Flask (cambiar 'app' por 'application' para Passenger)
 application = Flask(__name__)
 
@@ -25,20 +30,16 @@ META_VERIFY_TOKEN = os.environ.get('META_VERIFY_TOKEN') or 'milkiin_verify_token
 # Variables para Google Calendar
 GOOGLE_CALENDAR_CREDENTIALS_JSON = os.environ.get('GOOGLE_CALENDAR_CREDENTIALS')
 GOOGLE_CALENDAR_ID = os.environ.get('GOOGLE_CALENDAR_ID')
-SCOPES = ['https://www.googleapis.com/auth/calendar.events']
+SCOPES = ['https://www.googleapis.com/auth/calendar.events']  # Sin espacios extra
 
 # === CONFIGURACIÓN DE CORREO ELECTRÓNICO ===
-# Asegúrate de configurar estas variables en tu entorno de producción
 EMAIL_ADDRESS = os.environ.get('EMAIL_ADDRESS')
-EMAIL_PASSWORD = os.environ.get('EMAIL_PASSWORD') # Usa una contraseña de aplicación si es posible
-SMTP_SERVER = 'smtp.gmail.com' # Ejemplo para Gmail
-SMTP_PORT = 465 # Puerto SSL para la mayoría de los servidores
+EMAIL_PASSWORD = os.environ.get('EMAIL_PASSWORD')
+SMTP_SERVER = 'smtp.gmail.com'
+SMTP_PORT = 465
 
 # === AUTENTICACIÓN Y SERVICIO DE CALENDAR ===
 def get_calendar_service():
-    """
-    Inicializa el servicio de Google Calendar usando las credenciales de la cuenta de servicio.
-    """
     try:
         info = json.loads(GOOGLE_CALENDAR_CREDENTIALS_JSON)
         credentials = service_account.Credentials.from_service_account_info(
@@ -63,7 +64,6 @@ WELCOME_MESSAGE = {
     }
 }
 
-# SERVICIOS PRIMERA VEZ
 SERVICIOS_PRIMERA_VEZ = {
     "type": "text",
     "text": {
@@ -71,7 +71,6 @@ SERVICIOS_PRIMERA_VEZ = {
     }
 }
 
-# SERVICIOS SUBSECUENTE
 SERVICIOS_SUBSECUENTE = {
     "type": "text",
     "text": {
@@ -79,7 +78,6 @@ SERVICIOS_SUBSECUENTE = {
     }
 }
 
-# SUBOPCIONES "OTROS"
 OTROS_OPCIONES = {
     "type": "text",
     "text": {
@@ -87,7 +85,6 @@ OTROS_OPCIONES = {
     }
 }
 
-# ESPECIALISTAS
 ESPECIALISTAS = {
     "type": "text",
     "text": {
@@ -95,7 +92,6 @@ ESPECIALISTAS = {
     }
 }
 
-# HORARIOS
 HORARIOS_PRIMERA_VEZ = {
     "type": "text",
     "text": {
@@ -110,7 +106,6 @@ HORARIOS_SUBSECUENTE = {
     }
 }
 
-# === MENSAJES DE RESPUESTA MODIFICADOS ===
 COSTOS = {
     "type": "text",
     "text": {
@@ -152,67 +147,55 @@ SERVICIOS_SUB_NOMBRES = {
     "7": "Otros"
 }
 
-# DURACIONES (en minutos)
 DURACIONES_PRIMERA_VEZ = {
-    "1": 90,     # Fertilidad
-    "2": 60,     # SOP
-    "3": 60,     # Chequeo Anual
-    "4": 60,     # Embarazo
-    "5": 30      # Otros
+    "1": 90,
+    "2": 60,
+    "3": 60,
+    "4": 60,
+    "5": 30
 }
 
 DURACIONES_SUBSECUENTE = {
-    "1": 45,     # Fertilidad
-    "2": 45,     # SOP
-    "3": 45,     # Chequeo Anual
-    "4": 45,     # Embarazo
-    "5": 30,     # Revisión de estudios
-    "6": 30,     # Seguimiento folicular
-    "7": 30      # Otros
+    "1": 45,
+    "2": 45,
+    "3": 45,
+    "4": 45,
+    "5": 30,
+    "6": 30,
+    "7": 30
 }
 
 # === FUNCIONES PARA WHATSAPP META API ===
-
 def send_whatsapp_message(phone_number, message_data):
-    """Envía mensaje usando WhatsApp Business API de Meta"""
     try:
         url = f"https://graph.facebook.com/v22.0/{META_PHONE_NUMBER_ID}/messages"
-        
         headers = {
             'Authorization': f'Bearer {META_ACCESS_TOKEN}',
             'Content-Type': 'application/json'
         }
-        
         formatted_phone = format_phone_number(phone_number)
-        
         payload = {
             "messaging_product": "whatsapp",
             "to": formatted_phone,
             "type": message_data["type"]
         }
-        
         if message_data["type"] == "text":
             payload["text"] = message_data["text"]
         elif message_data["type"] == "template":
             payload["template"] = message_data["template"]
-        
         response = requests.post(url, headers=headers, json=payload)
-        
         if response.status_code == 200:
             print(f"✅ Mensaje enviado a {phone_number}")
             return response.json()
         else:
             print(f"❌ Error enviando mensaje: {response.status_code} - {response.text}")
             return None
-            
     except Exception as e:
         print(f"❌ Error en send_whatsapp_message: {e}")
         return None
 
 def format_phone_number(phone):
-    """Formatea número de teléfono para WhatsApp API"""
     clean_phone = re.sub(r'\D', '', phone)
-    
     if clean_phone.startswith('52') and len(clean_phone) == 12:
         return clean_phone
     elif clean_phone.startswith('1') and len(clean_phone) == 11:
@@ -222,37 +205,96 @@ def format_phone_number(phone):
     return clean_phone
 
 def extract_user_data(message_body):
-    """Extrae datos del paciente del mensaje"""
     data = {}
     lines = message_body.split('\n')
-    
     for line in lines:
         if 'nombre' in line.lower() or 'paciente' in line.lower():
             data['nombre'] = line.split(':', 1)[1].strip() if ':' in line else line
-        # Se elimina la extracción de correo de aquí para pedirlo por separado
-        # elif '@' in line and '.' in line:
-        #     match = re.search(r'[\w\.-]+@[\w\.-]+\.\w+', line)
-        #     if match:
-        #         data['correo'] = match.group(0)
         elif re.search(r'\d{10,}', line):
             phone_match = re.search(r'\d{10,}', line)
             if phone_match:
                 data['telefono'] = phone_match.group(0)
-    
     return data
 
-# === FUNCIONES PARA GOOGLE CALENDAR ===
+# === GENERAR ARCHIVO .ICS ===
+def generar_archivo_ics(nombre_paciente, servicio, especialista, fecha_hora, duracion_minutos):
+    cal = Calendar()
+    event = IcsEvent()
+    event.name = f"Cita en Milkiin - {servicio}"
+    event.begin = fecha_hora
+    event.end = fecha_hora + timedelta(minutes=duracion_minutos)
+    event.location = "Insurgentes Sur 1160, 6º piso, Colonia Del Valle, Ciudad de México"
+    event.description = f"""
+Cita agendada con éxito en Milkiin ❤️
+
+Servicio: {servicio}
+Especialista: {especialista}
+Paciente: {nombre_paciente}
+
+📍 Dirección: Insurgentes Sur 1160, 6º piso, Colonia Del Valle
+🗺️ [Google Maps](https://maps.app.goo.gl/VfWbVgwHLQrZPNrNA)
+
+💳 Aceptamos tarjeta (incluyendo AMEX) y efectivo.
+⏰ Recordatorio: Si necesitas cancelar, avísanos con 72 horas de anticipación.
+
+¡Te esperamos con cariño!
+    """.strip()
+    cal.events.add(event)
+    temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".ics")
+    temp_file.write(cal.serialize().encode("utf-8"))
+    temp_file.close()
+    return temp_file.name
+
+# === ENVIAR .ICS POR WHATSAPP ===
+def send_whatsapp_document(phone_number, file_path, caption="📅 Tu cita ha sido agendada. Adjunto está el archivo para agregarla a tu calendario."):
+    try:
+        formatted_phone = format_phone_number(phone_number)
+        media_upload_url = f"https://graph.facebook.com/v22.0/{META_PHONE_NUMBER_ID}/media"
+        headers = {'Authorization': f'Bearer {META_ACCESS_TOKEN}'}
+        with open(file_path, 'rb') as f:
+            files = {
+                'file': (os.path.basename(file_path), f, 'text/calendar'),
+                'type': 'document',
+                'messaging_product': 'whatsapp'
+            }
+            data = {'messaging_product': 'whatsapp', 'type': 'document'}
+            response_upload = requests.post(media_upload_url, headers=headers, files=files, data=data)
+        if response_upload.status_code != 200:
+            print(f"❌ Error al subir archivo .ics: {response_upload.text}")
+            return False
+        media_id = response_upload.json().get('id')
+        if not media_id:
+            print("❌ No se recibió media_id después de subir el archivo.")
+            return False
+        send_url = f"https://graph.facebook.com/v22.0/{META_PHONE_NUMBER_ID}/messages"
+        payload = {
+            "messaging_product": "whatsapp",
+            "to": formatted_phone,
+            "type": "document",
+            "document": {
+                "id": media_id,
+                "filename": "cita_milkiin.ics",
+                "caption": caption
+            }
+        }
+        send_response = requests.post(send_url, headers=headers, json=payload)
+        if send_response.status_code == 200:
+            print("✅ Archivo .ics enviado por WhatsApp.")
+            return True
+        else:
+            print(f"❌ Error al enviar documento por WhatsApp: {send_response.text}")
+            return False
+    except Exception as e:
+        print(f"❌ Error en send_whatsapp_document: {e}")
+        return False
+
+# === GOOGLE CALENDAR ===
 def crear_evento_google_calendar(resumen, inicio, duracion_minutos, descripcion):
-    """
-    Crea un evento en el calendario de Google.
-    """
     try:
         service = get_calendar_service()
         if not service:
             return None
-        
         fin = inicio + timedelta(minutes=duracion_minutos)
-        
         event = {
             'summary': resumen,
             'description': descripcion,
@@ -264,11 +306,8 @@ def crear_evento_google_calendar(resumen, inicio, duracion_minutos, descripcion)
                 'dateTime': fin.isoformat(),
                 'timeZone': 'America/Mexico_City',
             },
-            'attendees': [
-                {'email': GOOGLE_CALENDAR_ID},
-            ],
+            'attendees': [{'email': GOOGLE_CALENDAR_ID}],
         }
-        
         event = service.events().insert(calendarId=GOOGLE_CALENDAR_ID, body=event).execute()
         print(f"✅ Evento de Google Calendar creado: {event.get('htmlLink')}")
         return event.get('htmlLink')
@@ -276,23 +315,18 @@ def crear_evento_google_calendar(resumen, inicio, duracion_minutos, descripcion)
         print(f"❌ Error al crear evento de Google Calendar: {error}")
         return None
     except Exception as e:
-        print(f"❌ Error desconocido al crear evento de Google Calendar: {e}")
+        print(f"❌ Error desconocido: {e}")
         return None
 
-# === FUNCIONES DE CORREO ELECTRÓNICO ===
+# === ENVÍO DE CORREO ===
 def send_appointment_email(recipient_email, patient_name, doctor_name, appointment_date, appointment_time):
-    """
-    Función para enviar una confirmación de cita por correo electrónico.
-    """
     if not all([EMAIL_ADDRESS, EMAIL_PASSWORD, recipient_email]):
         print("❌ Error: Faltan credenciales de correo o correo del destinatario.")
         return False
-
     message = MIMEMultipart("alternative")
     message["Subject"] = "Confirmación de Cita - Milkiin"
     message["From"] = EMAIL_ADDRESS
     message["To"] = recipient_email
-
     text = f"""
     Hola {patient_name},
 
@@ -335,7 +369,6 @@ def send_appointment_email(recipient_email, patient_name, doctor_name, appointme
     part2 = MIMEText(html, "html")
     message.attach(part1)
     message.attach(part2)
-
     context = ssl.create_default_context()
     try:
         with smtplib.SMTP_SSL(SMTP_SERVER, SMTP_PORT, context=context) as server:
@@ -343,26 +376,20 @@ def send_appointment_email(recipient_email, patient_name, doctor_name, appointme
             server.sendmail(EMAIL_ADDRESS, recipient_email, message.as_string())
             print(f"✅ Correo enviado a {recipient_email}")
             return True
-    except smtplib.SMTPAuthenticationError:
-        print("❌ Error de autenticación. Revisa el usuario y la contraseña.")
-        return False
     except Exception as e:
         print(f"❌ Error al enviar correo: {e}")
         return False
 
-# === FUNCIONES DE PROCESAMIENTO ===
-
+# === PROCESAMIENTO DE MENSAJES ===
 def process_user_message(phone_number, message_body):
-    """Procesa mensajes usando la lógica del bot"""
     user_data = user_state.get(phone_number, {"stage": "start"})
     user_info = user_data_storage.get(phone_number, {})
-    
     print(f"[MENSAJE ENTRANTE] {phone_number}: {message_body}")
-    
+
     if user_data["stage"] == "start":
         send_whatsapp_message(phone_number, WELCOME_MESSAGE)
         user_data["stage"] = "option_selected"
-    
+
     elif user_data["stage"] == "option_selected":
         if message_body == "1":
             user_data["tipo"] = "primera_vez"
@@ -402,7 +429,7 @@ def process_user_message(phone_number, message_body):
                 "type": "text",
                 "text": {"body": "Por favor, selecciona una opción válida del 1 al 6."}
             })
-    
+
     # === PRIMERA VEZ ===
     elif user_data["stage"] == "servicio_primera":
         if message_body in ["1", "2", "3", "4"]:
@@ -418,7 +445,7 @@ def process_user_message(phone_number, message_body):
                 "type": "text",
                 "text": {"body": "Por favor, elige una opción válida (1-5)."}
             })
-    
+
     elif user_data["stage"] == "otros_opciones":
         if message_body == "3":
             send_whatsapp_message(phone_number, {
@@ -430,12 +457,11 @@ def process_user_message(phone_number, message_body):
         else:
             user_data["stage"] = "especialista"
             send_whatsapp_message(phone_number, ESPECIALISTAS)
-    
+
     elif user_data["stage"] == "especialista":
         if message_body in ["1", "2", "3", "4", "5"]:
             user_data["especialista"] = message_body
-            # 💡 Corrección: pedir datos sin el correo en un solo bloque
-            user_data["stage"] = "pedir_datos_sin_correo" 
+            user_data["stage"] = "pedir_datos_sin_correo"
             send_whatsapp_message(phone_number, {
                 "type": "text",
                 "text": {"body": "Por favor, envía:\nNombre completo\nTeléfono\nFecha de nacimiento\nEdad"}
@@ -445,30 +471,24 @@ def process_user_message(phone_number, message_body):
                 "type": "text",
                 "text": {"body": "Por favor, elige una opción válida (1-5)."}
             })
-    
-    # 💡 Corrección: nueva etapa para procesar los datos del usuario
+
     elif user_data["stage"] == "pedir_datos_sin_correo":
         extracted_data = extract_user_data(message_body)
         user_info.update(extracted_data)
         user_data_storage[phone_number] = user_info
-        
-        # 💡 Corrección: siguiente etapa para pedir el correo
-        user_data["stage"] = "esperando_correo" 
+        user_data["stage"] = "esperando_correo"
         send_whatsapp_message(phone_number, {
             "type": "text",
             "text": {"body": "Gracias. Ahora, por favor, envíanos tu correo electrónico para enviarte la confirmación."}
         })
-    
-    # 💡 Corrección: nueva etapa para capturar el correo electrónico
+
     elif user_data["stage"] == "esperando_correo":
         email_match = re.search(r'[\w\.-]+@[\w\.-]+\.\w+', message_body)
         if email_match:
-            user_info["correo"] = email_match.group(0) # Guarda el correo
+            user_info["correo"] = email_match.group(0)
             user_data_storage[phone_number] = user_info
-            
             user_data["stage"] = "mostrar_horarios"
             send_whatsapp_message(phone_number, HORARIOS_PRIMERA_VEZ)
-            
             pago_info = {
                 "type": "text",
                 "text": {
@@ -476,19 +496,17 @@ def process_user_message(phone_number, message_body):
                 }
             }
             send_whatsapp_message(phone_number, pago_info)
-            
             send_whatsapp_message(phone_number, {
                 "type": "text",
                 "text": {"body": "Por favor, envía la fecha y hora que prefieras (ej: 2025-04-05 10:00)"}
             })
             user_data["stage"] = "esperando_fecha"
-            
         else:
             send_whatsapp_message(phone_number, {
                 "type": "text",
                 "text": {"body": "El formato del correo es incorrecto. Por favor, inténtalo de nuevo."}
             })
-    
+
     # === SUBSECUENTE ===
     elif user_data["stage"] == "servicio_subsecuente":
         if message_body in ["1", "2", "3", "4", "5", "6"]:
@@ -507,7 +525,7 @@ def process_user_message(phone_number, message_body):
                 "type": "text",
                 "text": {"body": "Por favor, elige una opción válida (1-7)."}
             })
-    
+
     elif user_data["stage"] == "otros_opciones_sub":
         if message_body == "3":
             send_whatsapp_message(phone_number, {
@@ -522,12 +540,11 @@ def process_user_message(phone_number, message_body):
                 "type": "text",
                 "text": {"body": "Por favor, envía:\nNombre completo\nCorreo electrónico\nTeléfono\nFecha de nacimiento\nEdad"}
             })
-    
+
     elif user_data["stage"] == "datos_subsecuente":
         extracted_data = extract_user_data(message_body)
         user_info.update(extracted_data)
         user_data_storage[phone_number] = user_info
-        
         user_data["stage"] = "mostrar_horarios_sub"
         send_whatsapp_message(phone_number, HORARIOS_SUBSECUENTE)
         send_whatsapp_message(phone_number, {
@@ -535,28 +552,26 @@ def process_user_message(phone_number, message_body):
             "text": {"body": "Por favor, responde con la fecha y hora que prefieras (ej: 2025-04-05 10:00)"}
         })
         user_data["stage"] = "esperando_fecha_sub"
-    
+
     # === AGENDAR CITA (PRIMERA VEZ) ===
     elif user_data["stage"] == "esperando_fecha":
         try:
             fecha_hora_str = message_body.strip()
             fecha_hora = datetime.strptime(fecha_hora_str, "%Y-%m-%d %H:%M")
-            
             servicio_key = user_data.get("servicio", "1")
             duracion = DURACIONES_PRIMERA_VEZ.get(servicio_key, 60)
             servicio_nombre = SERVICIOS_NOMBRES.get(servicio_key, "Consulta")
             especialista_key = user_data.get("especialista", "1")
             especialista_nombre = ESPECIALISTAS_NOMBRES.get(especialista_key, "No definido")
             nombre_paciente = user_info.get('nombre', 'Paciente Anónimo')
-            
+
             crear_evento_google_calendar(
                 resumen=f"Cita - {servicio_nombre} con {especialista_nombre}",
                 inicio=fecha_hora,
                 duracion_minutos=duracion,
                 descripcion=f"Paciente: {nombre_paciente}\nTeléfono: {phone_number}\nServicio: {servicio_nombre}\nEspecialista: {especialista_nombre}"
             )
-            
-            # === NUEVO: Enviar correo de confirmación ===
+
             if user_info.get('correo'):
                 send_appointment_email(
                     user_info['correo'],
@@ -565,9 +580,21 @@ def process_user_message(phone_number, message_body):
                     fecha_hora.strftime("%Y-%m-%d"),
                     fecha_hora.strftime("%H:%M")
                 )
-            
+
+            try:
+                ics_path = generar_archivo_ics(
+                    nombre_paciente=nombre_paciente,
+                    servicio=servicio_nombre,
+                    especialista=especialista_nombre,
+                    fecha_hora=fecha_hora,
+                    duracion_minutos=duracion
+                )
+                send_whatsapp_document(phone_number, ics_path)
+                os.unlink(ics_path)
+            except Exception as e:
+                print(f"⚠️ No se pudo enviar .ics: {e}")
+
             send_whatsapp_message(phone_number, CONFIRMACION)
-            
             cita_detalle = {
                 "type": "text",
                 "text": {
@@ -575,27 +602,25 @@ def process_user_message(phone_number, message_body):
                 }
             }
             send_whatsapp_message(phone_number, cita_detalle)
-            
             del user_state[phone_number]
             del user_data_storage[phone_number]
-            
         except ValueError:
             send_whatsapp_message(phone_number, {
                 "type": "text",
                 "text": {"body": "Por favor, envía la fecha y hora en formato: AAAA-MM-DD HH:MM\nEj: 2025-04-05 10:00"}
             })
-    
+
     # === AGENDAR CITA (SUBSECUENTE) ===
     elif user_data["stage"] == "esperando_fecha_sub":
         try:
             fecha_hora_str = message_body.strip()
             fecha_hora = datetime.strptime(fecha_hora_str, "%Y-%m-%d %H:%M")
-            
             servicio_key = user_data.get("servicio", "1")
             duracion = DURACIONES_SUBSECUENTE.get(servicio_key, 45)
             servicio_nombre = SERVICIOS_SUB_NOMBRES.get(servicio_key, "Consulta")
             nombre_paciente = user_info.get('nombre', 'Paciente Anónimo')
-            
+            especialista_nombre = "Por definir"
+
             crear_evento_google_calendar(
                 resumen=f"Cita - {servicio_nombre} (Subsecuente)",
                 inicio=fecha_hora,
@@ -603,18 +628,29 @@ def process_user_message(phone_number, message_body):
                 descripcion=f"Paciente: {nombre_paciente}\nTeléfono: {phone_number}\nServicio: {servicio_nombre}"
             )
 
-            # === NUEVO: Enviar correo de confirmación ===
             if user_info.get('correo'):
                 send_appointment_email(
                     user_info['correo'],
                     nombre_paciente,
-                    "No especificado", # No se eligió especialista en este flujo
+                    especialista_nombre,
                     fecha_hora.strftime("%Y-%m-%d"),
                     fecha_hora.strftime("%H:%M")
                 )
-            
+
+            try:
+                ics_path = generar_archivo_ics(
+                    nombre_paciente=nombre_paciente,
+                    servicio=servicio_nombre,
+                    especialista=especialista_nombre,
+                    fecha_hora=fecha_hora,
+                    duracion_minutos=duracion
+                )
+                send_whatsapp_document(phone_number, ics_path)
+                os.unlink(ics_path)
+            except Exception as e:
+                print(f"⚠️ No se pudo enviar .ics: {e}")
+
             send_whatsapp_message(phone_number, CONFIRMACION)
-            
             cita_detalle = {
                 "type": "text",
                 "text": {
@@ -622,16 +658,14 @@ def process_user_message(phone_number, message_body):
                 }
             }
             send_whatsapp_message(phone_number, cita_detalle)
-            
             del user_state[phone_number]
             del user_data_storage[phone_number]
-            
         except ValueError:
             send_whatsapp_message(phone_number, {
                 "type": "text",
                 "text": {"body": "Por favor, envía la fecha y hora en formato: AAAA-MM-DD HH:MM\nEj: 2025-04-05 10:00"}
             })
-    
+
     # === ATENCIÓN AL CLIENTE ===
     elif user_data["stage"] == "atencion_cliente":
         if message_body == "1":
@@ -643,7 +677,7 @@ def process_user_message(phone_number, message_body):
             })
         send_whatsapp_message(phone_number, WELCOME_MESSAGE)
         user_data["stage"] = "option_selected"
-    
+
     # === FACTURACIÓN ===
     elif user_data["stage"] == "facturacion":
         if message_body == "1":
@@ -658,7 +692,7 @@ def process_user_message(phone_number, message_body):
             })
         send_whatsapp_message(phone_number, WELCOME_MESSAGE)
         user_data["stage"] = "option_selected"
-    
+
     # === DUDAS ===
     elif user_data["stage"] == "dudas":
         print(f"[DUDA] {phone_number}: {message_body}")
@@ -668,37 +702,28 @@ def process_user_message(phone_number, message_body):
         })
         send_whatsapp_message(phone_number, WELCOME_MESSAGE)
         user_data["stage"] = "option_selected"
-    
+
     else:
         send_whatsapp_message(phone_number, WELCOME_MESSAGE)
         user_data["stage"] = "option_selected"
-    
+
     user_state[phone_number] = user_data
 
-# === WEBHOOKS DE META ===
-
+# === WEBHOOKS ===
 @application.route('/webhook/', methods=['GET', 'POST'])
 def webhook():
-    """Webhook para recibir mensajes de WhatsApp Meta API"""
     if request.method == 'GET':
         mode = request.args.get('hub.mode')
         token = request.args.get('hub.verify_token')
         challenge = request.args.get('hub.challenge')
-        
-        print(f"📥 Verificación de Webhook - Modo: {mode}, Token: {token}")
-        
         if mode and token:
             if mode == 'subscribe' and token == META_VERIFY_TOKEN:
-                print('✅ WEBHOOK_VERIFICADO')
                 return challenge
             else:
                 return 'Verificación fallida', 403
-    
     elif request.method == 'POST':
         try:
             data = request.get_json()
-            print(f"📥 Datos recibidos: {json.dumps(data, indent=2)}")
-            
             if data.get('entry'):
                 for entry in data['entry']:
                     if entry.get('changes'):
@@ -708,60 +733,11 @@ def webhook():
                                 for message in messages:
                                     phone_number = message['from']
                                     message_body = message.get('text', {}).get('body', '')
-                                    
                                     process_user_message(phone_number, message_body)
-            
             return 'EVENT_RECEIVED', 200
-            
         except Exception as e:
             print(f"❌ Error en webhook: {e}")
             return 'Error', 500
-
-@application.route('/send-test-message', methods=['POST'])
-def send_test_message():
-    """Endpoint para enviar mensajes de prueba"""
-    try:
-        data = request.get_json()
-        phone = data.get('phone')
-        message = data.get('message', 'Mensaje de prueba desde Milkiin Bot')
-        
-        if not phone:
-            return jsonify({"error": "Número de teléfono requerido"}), 400
-        
-        result = send_whatsapp_message(phone, {
-            "type": "text",
-            "text": {"body": message}
-        })
-        
-        return jsonify({"success": True, "result": result})
-        
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-# Endpoint de prueba para el envío de correo, útil para depuración.
-@application.route('/send-test-email', methods=['POST'])
-def send_test_email():
-    """Endpoint para enviar un correo de prueba."""
-    try:
-        data = request.get_json()
-        recipient = data.get('email', 'test@example.com')
-        name = data.get('name', 'Paciente de Prueba')
-        doctor = data.get('doctor', 'Mónica Olavarría')
-        date = data.get('date', '2025-04-20')
-        time = data.get('time', '10:00')
-
-        success = send_appointment_email(
-            recipient, name, doctor, date, time
-        )
-
-        if success:
-            return jsonify({"success": True, "message": f"Correo de prueba enviado a {recipient}."}), 200
-        else:
-            return jsonify({"success": False, "message": "Fallo al enviar el correo. Revisa la consola para más detalles."}), 500
-
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
 
 @application.route('/')
 def home():
@@ -771,14 +747,5 @@ def home():
         "version": "1.0.0"
     })
 
-# Para debugging - endpoint de prueba
-@application.route('/test-webhook')
-def test_webhook():
-    return jsonify({
-        "message": "Webhook endpoint disponible",
-        "endpoint": "/webhook",
-        "methods": ["GET", "POST"]
-    })
-
 if __name__ == "__main__":
-    pass
+    application.run(debug=True)
