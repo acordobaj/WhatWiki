@@ -2,3 +2,4 @@ Flask==2.3.3
 requests==2.31.0
 icalendar==5.0.12
 gunicorn
+google-auth
