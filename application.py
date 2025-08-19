@@ -4,6 +4,10 @@ import json
 import re
 from datetime import datetime, timedelta
 import os
+import smtplib
+import ssl
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
 # Importaciones para Google Calendar API
 from google.oauth2 import service_account
@@ -19,12 +23,16 @@ META_PHONE_NUMBER_ID = os.environ.get('META_PHONE_NUMBER_ID') or '12345678901234
 META_VERIFY_TOKEN = os.environ.get('META_VERIFY_TOKEN') or 'milkiin_verify_token_2024'
 
 # Variables para Google Calendar
-# El contenido del JSON de la cuenta de servicio debe estar en una sola línea en las variables de entorno de Render
 GOOGLE_CALENDAR_CREDENTIALS_JSON = os.environ.get('GOOGLE_CALENDAR_CREDENTIALS')
 GOOGLE_CALENDAR_ID = os.environ.get('GOOGLE_CALENDAR_ID')
-
-# Scopes de la API para Google Calendar
 SCOPES = ['https://www.googleapis.com/auth/calendar.events']
+
+# === CONFIGURACIÓN DE CORREO ELECTRÓNICO ===
+# Asegúrate de configurar estas variables en tu entorno de producción
+EMAIL_ADDRESS = os.environ.get('EMAIL_ADDRESS')
+EMAIL_PASSWORD = os.environ.get('EMAIL_PASSWORD') # Usa una contraseña de aplicación si es posible
+SMTP_SERVER = 'smtp.gmail.com' # Ejemplo para Gmail
+SMTP_PORT = 465 # Puerto SSL para la mayoría de los servidores
 
 # === AUTENTICACIÓN Y SERVICIO DE CALENDAR ===
 def get_calendar_service():
@@ -32,7 +40,6 @@ def get_calendar_service():
     Inicializa el servicio de Google Calendar usando las credenciales de la cuenta de servicio.
     """
     try:
-        # Cargamos las credenciales del JSON de la variable de entorno
         info = json.loads(GOOGLE_CALENDAR_CREDENTIALS_JSON)
         credentials = service_account.Credentials.from_service_account_info(
             info,
@@ -147,21 +154,21 @@ SERVICIOS_SUB_NOMBRES = {
 
 # DURACIONES (en minutos)
 DURACIONES_PRIMERA_VEZ = {
-    "1": 90,  # Fertilidad
-    "2": 60,  # SOP
-    "3": 60,  # Chequeo Anual
-    "4": 60,  # Embarazo
-    "5": 30  # Otros
+    "1": 90, 	# Fertilidad
+    "2": 60, 	# SOP
+    "3": 60, 	# Chequeo Anual
+    "4": 60, 	# Embarazo
+    "5": 30 	# Otros
 }
 
 DURACIONES_SUBSECUENTE = {
-    "1": 45,  # Fertilidad
-    "2": 45,  # SOP
-    "3": 45,  # Chequeo Anual
-    "4": 45,  # Embarazo
-    "5": 30,  # Revisión de estudios
-    "6": 30,  # Seguimiento folicular
-    "7": 30  # Otros
+    "1": 45, 	# Fertilidad
+    "2": 45, 	# SOP
+    "3": 45, 	# Chequeo Anual
+    "4": 45, 	# Embarazo
+    "5": 30, 	# Revisión de estudios
+    "6": 30, 	# Seguimiento folicular
+    "7": 30 	# Otros
 }
 
 # === FUNCIONES PARA WHATSAPP META API ===
@@ -169,7 +176,6 @@ DURACIONES_SUBSECUENTE = {
 def send_whatsapp_message(phone_number, message_data):
     """Envía mensaje usando WhatsApp Business API de Meta"""
     try:
-        # CORREGIDO: Eliminar espacio extra
         url = f"https://graph.facebook.com/v22.0/{META_PHONE_NUMBER_ID}/messages"
         
         headers = {
@@ -177,7 +183,6 @@ def send_whatsapp_message(phone_number, message_data):
             'Content-Type': 'application/json'
         }
         
-        # Formatear el número de teléfono
         formatted_phone = format_phone_number(phone_number)
         
         payload = {
@@ -186,7 +191,6 @@ def send_whatsapp_message(phone_number, message_data):
             "type": message_data["type"]
         }
         
-        # Agregar el contenido del mensaje
         if message_data["type"] == "text":
             payload["text"] = message_data["text"]
         elif message_data["type"] == "template":
@@ -207,16 +211,14 @@ def send_whatsapp_message(phone_number, message_data):
 
 def format_phone_number(phone):
     """Formatea número de teléfono para WhatsApp API"""
-    # Eliminar caracteres no numéricos
     clean_phone = re.sub(r'\D', '', phone)
     
-    # Asegurar formato correcto
     if clean_phone.startswith('52') and len(clean_phone) == 12:
         return clean_phone
     elif clean_phone.startswith('1') and len(clean_phone) == 11:
         return '52' + clean_phone[1:]
     elif len(clean_phone) == 10:
-        return '521' + clean_phone
+        return '52' + clean_phone
     return clean_phone
 
 def extract_user_data(message_body):
@@ -228,17 +230,124 @@ def extract_user_data(message_body):
         if 'nombre' in line.lower() or 'paciente' in line.lower():
             data['nombre'] = line.split(':', 1)[1].strip() if ':' in line else line
         elif '@' in line and '.' in line:
-            # Buscar correo
             match = re.search(r'[\w\.-]+@[\w\.-]+\.\w+', line)
             if match:
                 data['correo'] = match.group(0)
         elif re.search(r'\d{10,}', line):
-            # Buscar teléfono
             phone_match = re.search(r'\d{10,}', line)
             if phone_match:
                 data['telefono'] = phone_match.group(0)
     
     return data
+
+# === FUNCIONES PARA GOOGLE CALENDAR ===
+def crear_evento_google_calendar(resumen, inicio, duracion_minutos, descripcion):
+    """
+    Crea un evento en el calendario de Google.
+    """
+    try:
+        service = get_calendar_service()
+        if not service:
+            return None
+        
+        fin = inicio + timedelta(minutes=duracion_minutos)
+        
+        event = {
+            'summary': resumen,
+            'description': descripcion,
+            'start': {
+                'dateTime': inicio.isoformat(),
+                'timeZone': 'America/Mexico_City',
+            },
+            'end': {
+                'dateTime': fin.isoformat(),
+                'timeZone': 'America/Mexico_City',
+            },
+            'attendees': [
+                {'email': GOOGLE_CALENDAR_ID},
+            ],
+        }
+        
+        event = service.events().insert(calendarId=GOOGLE_CALENDAR_ID, body=event).execute()
+        print(f"✅ Evento de Google Calendar creado: {event.get('htmlLink')}")
+        return event.get('htmlLink')
+    except HttpError as error:
+        print(f"❌ Error al crear evento de Google Calendar: {error}")
+        return None
+    except Exception as e:
+        print(f"❌ Error desconocido al crear evento de Google Calendar: {e}")
+        return None
+
+# === FUNCIONES DE CORREO ELECTRÓNICO ===
+def send_appointment_email(recipient_email, patient_name, doctor_name, appointment_date, appointment_time):
+    """
+    Función para enviar una confirmación de cita por correo electrónico.
+    """
+    if not all([EMAIL_ADDRESS, EMAIL_PASSWORD, recipient_email]):
+        print("❌ Error: Faltan credenciales de correo o correo del destinatario.")
+        return False
+
+    message = MIMEMultipart("alternative")
+    message["Subject"] = "Confirmación de Cita - Milkiin"
+    message["From"] = EMAIL_ADDRESS
+    message["To"] = recipient_email
+
+    text = f"""
+    Hola {patient_name},
+
+    Tu cita con la Dra. {doctor_name} ha sido agendada con éxito.
+
+    Detalles de la cita:
+    Fecha: {appointment_date}
+    Hora: {appointment_time}
+
+    Te esperamos en nuestras instalaciones. Si tienes alguna duda, responde a este correo.
+
+    Saludos cordiales,
+    El equipo de Milkiin
+    """
+    html = f"""
+    <html>
+        <body>
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
+                <h2 style="color: #4CAF50;">✅ Cita Confirmada</h2>
+                <p>Hola <strong>{patient_name}</strong>,</p>
+                <p>Tu cita con la <strong>Dra. {doctor_name}</strong> ha sido agendada con éxito.</p>
+                <p>Aquí están los detalles de tu cita:</p>
+                <ul>
+                    <li><strong>Fecha:</strong> {appointment_date}</li>
+                    <li><strong>Hora:</strong> {appointment_time}</li>
+                </ul>
+                <p>¡Esperamos verte pronto!</p>
+                <p>Si necesitas reagendar o tienes alguna pregunta, por favor contáctanos.</p>
+                <p style="margin-top: 30px;">
+                    Saludos cordiales,<br>
+                    El equipo de Milkiin
+                </p>
+                <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
+                <p style="font-size: 12px; color: #999;">Este es un mensaje automático, por favor no lo respondas directamente si no es para dudas sobre tu cita.</p>
+            </div>
+        </body>
+    </html>
+    """
+    part1 = MIMEText(text, "plain")
+    part2 = MIMEText(html, "html")
+    message.attach(part1)
+    message.attach(part2)
+
+    context = ssl.create_default_context()
+    try:
+        with smtplib.SMTP_SSL(SMTP_SERVER, SMTP_PORT, context=context) as server:
+            server.login(EMAIL_ADDRESS, EMAIL_PASSWORD)
+            server.sendmail(EMAIL_ADDRESS, recipient_email, message.as_string())
+            print(f"✅ Correo enviado a {recipient_email}")
+            return True
+    except smtplib.SMTPAuthenticationError:
+        print("❌ Error de autenticación. Revisa el usuario y la contraseña.")
+        return False
+    except Exception as e:
+        print(f"❌ Error al enviar correo: {e}")
+        return False
 
 # === FUNCIONES DE PROCESAMIENTO ===
 
@@ -249,7 +358,6 @@ def process_user_message(phone_number, message_body):
     
     print(f"[MENSAJE ENTRANTE] {phone_number}: {message_body}")
     
-    # === FLUJO PRINCIPAL ===
     if user_data["stage"] == "start":
         send_whatsapp_message(phone_number, WELCOME_MESSAGE)
         user_data["stage"] = "option_selected"
@@ -337,7 +445,6 @@ def process_user_message(phone_number, message_body):
             })
     
     elif user_data["stage"] == "datos_paciente":
-        # Extraer datos del paciente
         extracted_data = extract_user_data(message_body)
         user_info.update(extracted_data)
         user_data_storage[phone_number] = user_info
@@ -345,7 +452,6 @@ def process_user_message(phone_number, message_body):
         user_data["stage"] = "mostrar_horarios"
         send_whatsapp_message(phone_number, HORARIOS_PRIMERA_VEZ)
         
-        # Enviar información de pago
         pago_info = {
             "type": "text",
             "text": {
@@ -354,7 +460,6 @@ def process_user_message(phone_number, message_body):
         }
         send_whatsapp_message(phone_number, pago_info)
         
-        # === AÑADIDO: Instrucción para enviar fecha y hora ===
         send_whatsapp_message(phone_number, {
             "type": "text",
             "text": {"body": "Por favor, envía la fecha y hora que prefieras (ej: 2025-04-05 10:00)"}
@@ -396,7 +501,6 @@ def process_user_message(phone_number, message_body):
             })
     
     elif user_data["stage"] == "datos_subsecuente":
-        # Extraer datos del paciente
         extracted_data = extract_user_data(message_body)
         user_info.update(extracted_data)
         user_data_storage[phone_number] = user_info
@@ -415,7 +519,6 @@ def process_user_message(phone_number, message_body):
             fecha_hora_str = message_body.strip()
             fecha_hora = datetime.strptime(fecha_hora_str, "%Y-%m-%d %H:%M")
             
-            # Obtener datos de la cita
             servicio_key = user_data.get("servicio", "1")
             duracion = DURACIONES_PRIMERA_VEZ.get(servicio_key, 60)
             servicio_nombre = SERVICIOS_NOMBRES.get(servicio_key, "Consulta")
@@ -423,18 +526,25 @@ def process_user_message(phone_number, message_body):
             especialista_nombre = ESPECIALISTAS_NOMBRES.get(especialista_key, "No definido")
             nombre_paciente = user_info.get('nombre', 'Paciente Anónimo')
             
-            # Crear evento en Google Calendar
             crear_evento_google_calendar(
                 resumen=f"Cita - {servicio_nombre} con {especialista_nombre}",
                 inicio=fecha_hora,
                 duracion_minutos=duracion,
                 descripcion=f"Paciente: {nombre_paciente}\nTeléfono: {phone_number}\nServicio: {servicio_nombre}\nEspecialista: {especialista_nombre}"
             )
-
-            # Enviar confirmación
+            
+            # === NUEVO: Enviar correo de confirmación ===
+            if user_info.get('correo'):
+                send_appointment_email(
+                    user_info['correo'],
+                    nombre_paciente,
+                    especialista_nombre,
+                    fecha_hora.strftime("%Y-%m-%d"),
+                    fecha_hora.strftime("%H:%M")
+                )
+            
             send_whatsapp_message(phone_number, CONFIRMACION)
             
-            # Enviar detalles de la cita
             cita_detalle = {
                 "type": "text",
                 "text": {
@@ -443,7 +553,6 @@ def process_user_message(phone_number, message_body):
             }
             send_whatsapp_message(phone_number, cita_detalle)
             
-            # Limpiar estado del usuario
             del user_state[phone_number]
             del user_data_storage[phone_number]
             
@@ -459,24 +568,30 @@ def process_user_message(phone_number, message_body):
             fecha_hora_str = message_body.strip()
             fecha_hora = datetime.strptime(fecha_hora_str, "%Y-%m-%d %H:%M")
             
-            # Obtener datos de la cita
             servicio_key = user_data.get("servicio", "1")
             duracion = DURACIONES_SUBSECUENTE.get(servicio_key, 45)
             servicio_nombre = SERVICIOS_SUB_NOMBRES.get(servicio_key, "Consulta")
             nombre_paciente = user_info.get('nombre', 'Paciente Anónimo')
             
-            # Crear evento en Google Calendar
             crear_evento_google_calendar(
                 resumen=f"Cita - {servicio_nombre} (Subsecuente)",
                 inicio=fecha_hora,
                 duracion_minutos=duracion,
                 descripcion=f"Paciente: {nombre_paciente}\nTeléfono: {phone_number}\nServicio: {servicio_nombre}"
             )
+
+            # === NUEVO: Enviar correo de confirmación ===
+            if user_info.get('correo'):
+                send_appointment_email(
+                    user_info['correo'],
+                    nombre_paciente,
+                    "No especificado", # No se eligió especialista en este flujo
+                    fecha_hora.strftime("%Y-%m-%d"),
+                    fecha_hora.strftime("%H:%M")
+                )
             
-            # Enviar confirmación
             send_whatsapp_message(phone_number, CONFIRMACION)
             
-            # Enviar detalles de la cita
             cita_detalle = {
                 "type": "text",
                 "text": {
@@ -485,7 +600,6 @@ def process_user_message(phone_number, message_body):
             }
             send_whatsapp_message(phone_number, cita_detalle)
             
-            # Limpiar estado del usuario
             del user_state[phone_number]
             del user_data_storage[phone_number]
             
@@ -536,52 +650,7 @@ def process_user_message(phone_number, message_body):
         send_whatsapp_message(phone_number, WELCOME_MESSAGE)
         user_data["stage"] = "option_selected"
     
-    # Guardar estado
     user_state[phone_number] = user_data
-
-# === FUNCIONES PARA GOOGLE CALENDAR ===
-def crear_evento_google_calendar(resumen, inicio, duracion_minutos, descripcion):
-    """
-    Crea un evento en el calendario de Google.
-    :param resumen: Título del evento.
-    :param inicio: Objeto datetime para la hora de inicio.
-    :param duracion_minutos: Duración del evento en minutos.
-    :param descripcion: Descripción del evento.
-    :return: URL del evento creado o None si hay un error.
-    """
-    try:
-        service = get_calendar_service()
-        if not service:
-            return None
-        
-        # Calcular la hora de finalización
-        fin = inicio + timedelta(minutes=duracion_minutos)
-        
-        event = {
-            'summary': resumen,
-            'description': descripcion,
-            'start': {
-                'dateTime': inicio.isoformat(),
-                'timeZone': 'America/Mexico_City',
-            },
-            'end': {
-                'dateTime': fin.isoformat(),
-                'timeZone': 'America/Mexico_City',
-            },
-            'attendees': [
-                {'email': GOOGLE_CALENDAR_ID},
-            ],
-        }
-        
-        event = service.events().insert(calendarId=GOOGLE_CALENDAR_ID, body=event).execute()
-        print(f"✅ Evento de Google Calendar creado: {event.get('htmlLink')}")
-        return event.get('htmlLink')
-    except HttpError as error:
-        print(f"❌ Error al crear evento de Google Calendar: {error}")
-        return None
-    except Exception as e:
-        print(f"❌ Error desconocido al crear evento de Google Calendar: {e}")
-        return None
 
 # === WEBHOOKS DE META ===
 
@@ -645,6 +714,31 @@ def send_test_message():
         
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+# Endpoint de prueba para el envío de correo, útil para depuración.
+@application.route('/send-test-email', methods=['POST'])
+def send_test_email():
+    """Endpoint para enviar un correo de prueba."""
+    try:
+        data = request.get_json()
+        recipient = data.get('email', 'test@example.com')
+        name = data.get('name', 'Paciente de Prueba')
+        doctor = data.get('doctor', 'Mónica Olavarría')
+        date = data.get('date', '2025-04-20')
+        time = data.get('time', '10:00')
+
+        success = send_appointment_email(
+            recipient, name, doctor, date, time
+        )
+
+        if success:
+            return jsonify({"success": True, "message": f"Correo de prueba enviado a {recipient}."}), 200
+        else:
+            return jsonify({"success": False, "message": "Fallo al enviar el correo. Revisa la consola para más detalles."}), 500
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 
 @application.route('/')
 def home():
