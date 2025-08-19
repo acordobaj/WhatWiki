@@ -191,20 +191,40 @@ def format_phone_number(phone):
 def extract_user_data(message_body):
     data = {}
     lines = message_body.split('\n')
-    for line in lines:
-        if 'nombre' in line.lower() or 'paciente' in line.lower():
-            if ':' in line:
-                data['nombre'] = line.split(':', 1)[1].strip()
-            else:
-                data['nombre'] = line.strip()
-        elif '@' in line and '.' in line:
-            match = re.search(r'[\w\.-]+@[\w\.-]+\.\w+', line)
-            if match:
-                data['correo'] = match.group(0)
-        elif re.search(r'\d{10,}', line):
-            phone_match = re.search(r'\d{10,}', line)
-            if phone_match:
-                data['telefono'] = phone_match.group(0)
+    
+    # ✅ Cambio: Lógica para manejar entrada separada por comas en una sola línea
+    if len(lines) == 1 and ',' in lines[0]:
+        parts = lines[0].split(',')
+        # Asumimos que el nombre está en la primera parte
+        data['nombre'] = parts[0].strip()
+        
+        # Opcional: Intentar extraer otros datos de la misma línea
+        for part in parts[1:]:
+            if '@' in part and '.' in part:
+                match = re.search(r'[\w\.-]+@[\w\.-]+\.\w+', part)
+                if match:
+                    data['correo'] = match.group(0)
+            elif re.search(r'\d{10,}', part):
+                phone_match = re.search(r'\d{10,}', part)
+                if phone_match:
+                    data['telefono'] = phone_match.group(0)
+    else:
+        # Lógica original para manejar líneas separadas por saltos de línea o con dos puntos
+        for line in lines:
+            if 'nombre' in line.lower() or 'paciente' in line.lower():
+                if ':' in line:
+                    data['nombre'] = line.split(':', 1)[1].strip()
+                else:
+                    data['nombre'] = line.strip()
+            elif '@' in line and '.' in line:
+                match = re.search(r'[\w\.-]+@[\w\.-]+\.\w+', line)
+                if match:
+                    data['correo'] = match.group(0)
+            elif re.search(r'\d{10,}', line):
+                phone_match = re.search(r'\d{10,}', line)
+                if phone_match:
+                    data['telefono'] = phone_match.group(0)
+                    
     return data
 
 # === PROCESAMIENTO DE MENSAJES ===
@@ -217,8 +237,6 @@ def process_user_message(phone_number, message_body):
     if user_data["stage"] == "start":
         send_whatsapp_message(phone_number, WELCOME_MESSAGE)
         user_data["stage"] = "option_selected"
-        user_state[phone_number] = user_data
-        return
 
     elif user_data["stage"] == "option_selected":
         if message_body == "1":
