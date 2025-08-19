@@ -43,7 +43,7 @@ user_data_storage = {}
 WELCOME_MESSAGE = {
     "type": "text",
     "text": {
-        "body": "¡Hola! Bienvenido(a) a Milkiin, donde cada paso en tu camino a la maternidad cuenta.\n\nSoy MilkiBot, tu asistente virtual, y estoy aquí para ayudarte con todo lo que necesites.\n\n¿En qué te puedo apoyar hoy?\n1️⃣ Paciente de primera vez\n2️⃣ Paciente subsecuente\n3️⃣ Atención al cliente\n4️⃣ Facturación\n5️⃣ Envío de Resultados\n6️⃣ Dudas"
+        "body": "👋 ¡Hola! Bienvenido(a) a Milkiin, donde cada paso en tu camino a la maternidad cuenta.\n✨ Soy MilkiBot, tu asistente virtual, y estoy aquí para ayudarte con todo lo que necesites.\n\n¿En qué te puedo apoyar hoy?\n1️⃣ Paciente de primera vez\n2️⃣ Paciente subsecuente\n3️⃣ Atención al cliente\n4️⃣ Facturación\n5️⃣ Envío de Resultados\n6️⃣ Dudas\n\nPor favor, selecciona una opción para comenzar…"
     }
 }
 
@@ -64,7 +64,7 @@ SERVICIOS_SUBSECUENTE = {
 OTROS_OPCIONES = {
     "type": "text",
     "text": {
-        "body": "Selecciona una opción:\n1️⃣ Espermabiopsia directa\n2️⃣ Ginecología Pediátrica y Adolescentes\n3️⃣ Hablar con América"
+        "body": "Selecciona una opción:\n1️⃣ Espermatabioscopia directa\n2️⃣ Ginecología Pediátrica y Adolescentes\n3️⃣ Hablar con América"
     }
 }
 
@@ -78,28 +78,35 @@ ESPECIALISTAS = {
 HORARIOS_PRIMERA_VEZ = {
     "type": "text",
     "text": {
-        "body": "Lunes: 9:00 – 19:00 hrs (comida 13:00–14:00)\nMartes: 9:00–11:00 hrs\nMiércoles: 15:00–20:00 hrs\nJueves: 9:00–12:00 / 15:00–18:00 hrs\nViernes: 9:00–15:00 hrs\nSábado: 10:00–11:30 hrs (solo fertilidad y SOP)"
+        "body": "Estos son los horarios establecidos:\nLunes de 9:00 – 19:00 hrs (hora de comida 13:00 – 14:00 hrs)\nMartes 9:00 - 11:00 hrs\nMiércoles 15:00 – 20:00 hrs\nJueves 9:00 – 12:00 hrs / 15:00 – 18:00 hrs\nViernes 9:00 – 15:00 hrs\nSábado 10:00 – 11:30 hrs (solo consultas de fertilidad y sop)"
     }
 }
 
 HORARIOS_SUBSECUENTE = {
     "type": "text",
     "text": {
-        "body": "Lunes: 9:00 – 19:00 hrs (comida 13:00–14:00)\nMartes: 9:00–11:00 hrs\nMiércoles: 15:00–20:00 hrs\nJueves: 9:00–12:00 / 15:00–18:00 hrs\nViernes: 9:00–15:00 hrs\nSábado: 8:00–15:00 hrs (solo fertilidad y SOP)"
+        "body": "Estos son los horarios establecidos:\nLunes de 9:00 – 19:00 hrs (hora de comida 13:00 – 14:00 hrs)\nMartes 9:00 - 11:00 hrs\nMiércoles 15:00 – 20:00 hrs\nJueves 9:00 – 12:00 hrs / 15:00 – 18:00 hrs\nViernes 9:00 – 15:00 hrs\nSábado 8:00 – 15:00 hrs (solo consultas de infertilidad y sop)"
     }
 }
 
 COSTOS = {
     "type": "text",
     "text": {
-        "body": "💰 Nuestros costos:\n• PAQUETE CHECK UP: $1,800 pesos\n• CONSULTA DE FERTILIDAD: $1,500 pesos\n• CONSULTA PRENATAL: $1,500 pesos\n• ESPERMABIOTOSCOPIA: $1,500 pesos\n• CON FRAGMENTACIÓN: $4,500 pesos"
+        "body": "💰 Nuestros costos:\n• PAQUETE CHECK UP: El costo es de $1,800 pesos (incluye papanicolaou, USG , revisión de mamas, colposcopia y consulta)\n• CONSULTA DE FERTILIDAD: El costo es de $1,500 pesos. (incluye ultrasonido)\n• CONSULTA PRENATAL: El costo es de $1,500 pesos. (incluye ultrasonido)\n• ESPERMABIOTOSCOPIA: $1,500 pesos\n• ESPERMABIOTOSCOPIA CON FRAGMENTACIÓN: $4,500 pesos\n\nPara otros costos (hablar con America)"
     }
 }
 
 CONFIRMACION = {
     "type": "text",
     "text": {
-        "body": "¡Gracias por agendar tu cita con Milkiin! 🎉\n\n📍 Te esperamos en:\nInsurgentes Sur 1160, 6º piso, Colonia Del Valle.\n\n💳 Aceptamos pagos con tarjeta (incluyendo AMEX) y en efectivo.\n\n⏰ Recordatorio importante:\nEn caso de cancelación, es necesario avisar con mínimo 72 horas de anticipación para poder realizar el reembolso del anticipo y reprogramar tu cita.\n\nAgradecemos tu comprensión y tu confianza. ❤️"
+        "body": "✅ ¡Gracias por agendar tu cita con Milkiin!\n\n📍 Te esperamos en: Insurgentes Sur 1160, 6º piso, Colonia Del Valle. 🗺️ Ubicación en Google Maps\n\n💳 Aceptamos pagos con tarjeta (incluyendo AMEX) y en efectivo."
+    }
+}
+
+INFO_IMPORTANTE = {
+    "type": "text",
+    "text": {
+        "body": "Te compartimos una información importante: 📌 Para consultas de primera vez, solicitamos un anticipo de $500 MXN. El monto restante se cubrirá el día de tu consulta, una vez finalizada.\nEsta medida nos permite asegurar tu lugar, ya que contamos con alta demanda.\n\nDatos para pago:\nBanco: BBVA\nCuenta: 048 482 8712\nCLABE: 012 180 0048 4828712 2\n\nFavor de enviar su comprobante de pago al correo milkiin.gine@gmail.com"
     }
 }
 
@@ -132,21 +139,21 @@ SERVICIOS_SUB_NOMBRES = {
 
 # DURACIONES (en minutos)
 DURACIONES_PRIMERA_VEZ = {
-    "1": 90,
-    "2": 60,
-    "3": 60,
-    "4": 60,
-    "5": 30
+    "1": 90, # Fertilidad
+    "2": 60, # SOP
+    "3": 60, # Chequeo Anual
+    "4": 60, # Embarazo
+    "5": 30  # Otros (Revisión de estudios)
 }
 
 DURACIONES_SUBSECUENTE = {
-    "1": 45,
-    "2": 45,
-    "3": 45,
-    "4": 45,
-    "5": 30,
-    "6": 30,
-    "7": 30
+    "1": 45, # Fertilidad (general)
+    "2": 45, # SOP
+    "3": 45, # Chequeo Anual
+    "4": 45, # Embarazo
+    "5": 30, # Revisión de estudios
+    "6": 30, # Seguimiento folicular
+    "7": 30  # Otros
 }
 
 # === FUNCIONES PARA WHATSAPP META API ===
@@ -197,16 +204,13 @@ def extract_user_data(message_body):
     # ✅ Lógica para manejar entrada separada por comas en una sola línea
     if len(lines) == 1 and ',' in lines[0]:
         parts = lines[0].split(',')
-        data['nombre'] = parts[0].strip()
-        for part in parts[1:]:
-            if '@' in part and '.' in part:
-                match = re.search(r'[\w\.-]+@[\w\.-]+\.\w+', part)
-                if match:
-                    data['correo'] = match.group(0)
-            elif re.search(r'\d{10,}', part):
-                phone_match = re.search(r'\d{10,}', part)
-                if phone_match:
-                    data['telefono'] = phone_match.group(0)
+        if len(parts) >= 1:
+            data['nombre'] = parts[0].strip()
+        if len(parts) >= 2:
+            data['correo'] = parts[1].strip()
+        if len(parts) >= 3:
+            data['telefono'] = parts[2].strip()
+        # La lógica actual no extrae fecha y edad de la misma línea, solo las solicita
     else:
         # Lógica original para manejar líneas separadas por saltos de línea
         for line in lines:
@@ -223,7 +227,7 @@ def extract_user_data(message_body):
                 phone_match = re.search(r'\d{10,}', line)
                 if phone_match:
                     data['telefono'] = phone_match.group(0)
-                    
+    
     return data
 
 # === PROCESAMIENTO DE MENSAJES ===
@@ -261,14 +265,14 @@ def process_user_message(phone_number, message_body):
         elif message_body == "5":
             send_whatsapp_message(phone_number, {
                 "type": "text",
-                "text": {"body": "Para el envío de resultados, envíalos al correo:\n📧 gine.moni.og@gmail.com"}
+                "text": {"body": "📑 Para el envío de resultados de análisis, por favor envíalos al siguiente correo: 📬 gine.moni.og@gmail.com\n\nNos aseguraremos de revisarlos con oportunidad antes de tu consulta. ¡Gracias por tu colaboración!"}
             })
             send_whatsapp_message(phone_number, WELCOME_MESSAGE)
             user_data["stage"] = "option_selected"
         elif message_body == "6":
             send_whatsapp_message(phone_number, {
                 "type": "text",
-                "text": {"body": "¿Tienes alguna duda? Escríbenos brevemente tu consulta y en breve te conectaremos con un miembro del equipo."}
+                "text": {"body": "💬 ¿Tienes alguna duda o necesitas asistencia personalizada?\n\nPor favor, escríbenos brevemente tu consulta y en unos momentos te conectaremos con un miembro de nuestro equipo.\n\n👩‍⚕️ Estamos aquí para ayudarte…"}
             })
             user_data["stage"] = "dudas"
         else:
@@ -325,13 +329,7 @@ def process_user_message(phone_number, message_body):
         user_data_storage[phone_number] = user_info
         user_data["stage"] = "mostrar_horarios"
         send_whatsapp_message(phone_number, HORARIOS_PRIMERA_VEZ)
-        pago_info = {
-            "type": "text",
-            "text": {
-                "body": "Te compartimos una información importante:\n\nPara consultas de primera vez, solicitamos un anticipo de $500 MXN.\n\nDatos para pago:\nBanco: BBVA\nCuenta: 048 482 8712\nCLABE: 012180004848287122\n\nFavor de enviar comprobante a: milkiin.gine@gmail.com"
-            }
-        }
-        send_whatsapp_message(phone_number, pago_info)
+        send_whatsapp_message(phone_number, INFO_IMPORTANTE)
         user_data["stage"] = "esperando_fecha"
 
     # Flujo subsecuente
@@ -423,6 +421,15 @@ def process_user_message(phone_number, message_body):
                 
             # ✅ Enviar mensajes de confirmación con el enlace de descarga (sin nombre del cliente)
             send_whatsapp_message(phone_number, CONFIRMACION)
+            
+            cancelacion_info = {
+                "type": "text",
+                "text": {
+                    "body": "📅 En caso de cancelación, es necesario avisar con mínimo 72 horas de anticipación para poder realizar el reembolso del anticipo y reprogramar tu cita. ⏳ Si no se cumple con este plazo, lamentablemente no podremos hacer el reembolso.\n\nAgradecemos tu comprensión y tu confianza. Estamos para acompañarte con profesionalismo y cariño en cada paso 🤍\n\nSi tienes alguna duda o necesitas apoyo adicional, no dudes en escribirnos. ¡Será un gusto atenderte! 🤍"
+                }
+            }
+            send_whatsapp_message(phone_number, cancelacion_info)
+
             cita_detalle = {
                 "type": "text",
                 "text": {
@@ -479,7 +486,11 @@ def process_user_message(phone_number, message_body):
                 f.write(cal.to_ical())
                 
             # ✅ Enviar mensajes de confirmación con el enlace de descarga (sin nombre del cliente)
-            send_whatsapp_message(phone_number, CONFIRMACION)
+            send_whatsapp_message(phone_number, {
+                "type": "text",
+                "text": {"body": "✅ ¡Gracias por agendar tu cita con Milkiin!\n\n📍 Te esperamos en: Insurgentes Sur 1160, 6º piso, Colonia Del Valle. 🗺️ Ubicación en Google Maps\n\n💳 Aceptamos pagos con tarjeta (incluyendo AMEX) y en efectivo.\n\nSi tienes alguna duda o necesitas apoyo adicional, no dudes en escribirnos."}
+            })
+            
             cita_detalle = {
                 "type": "text",
                 "text": {
@@ -509,12 +520,12 @@ def process_user_message(phone_number, message_body):
         if message_body == "1":
             send_whatsapp_message(phone_number, {
                 "type": "text",
-                "text": {"body": "Por favor, completa el formulario:\n🔗 [Formulario de facturación](https://docs.google.com/forms/d/e/1FAIpQLSfr1WWXWQGx4sZj3_0FnIp6XWBb1mol4GfVGfymflsRI0E5pA/viewform)"}
+                "text": {"body": "📄 Por favor, completa el siguiente formulario con tus datos fiscales: 🔗 [Formulario de facturación](https://docs.google.com/forms/d/e/1FAIpQLSfr1WWXWQGx4sZj3_0FnIp6XWBb1mol4GfVGfymflsRI0E5pA/viewform)\n\nUna vez enviado, te haremos llegar tu factura en un plazo máximo de 72 horas hábiles. ¡Gracias por tu preferencia!"}
             })
         elif message_body == "2":
             send_whatsapp_message(phone_number, {
                 "type": "text",
-                "text": {"body": "Para dudas de facturación, escribe a:\n📧 lcastillo@gbcasesoria.mx"}
+                "text": {"body": "📬 Para dudas de facturación, puedes escribirnos directamente a: lcastillo@gbcasesoria.mx\n\nEstaremos encantados de ayudarte lo antes posible. ¡Gracias por tu confianza!"}
             })
         send_whatsapp_message(phone_number, WELCOME_MESSAGE)
         user_data["stage"] = "option_selected"
@@ -533,7 +544,6 @@ def process_user_message(phone_number, message_body):
         user_data["stage"] = "option_selected"
 
     user_state[phone_number] = user_data
-
 
 # === WEBHOOKS ===
 @application.route('/webhook/', methods=['GET', 'POST'])
