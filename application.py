@@ -43,56 +43,56 @@ user_data_storage = {}
 WELCOME_MESSAGE = {
     "type": "text",
     "text": {
-        "body": "👋 ¡Hola! Bienvenido(a) a Milkiin, donde cada paso en tu camino a la maternidad cuenta.\n✨ Soy MilkiBot, tu asistente virtual, y estoy aquí para ayudarte con todo lo que necesites.\n\n¿En qué te puedo apoyar hoy?\n1️⃣ Paciente de primera vez\n2️⃣ Paciente subsecuente\n3️⃣ Atención al cliente\n4️⃣ Facturación\n5️⃣ Envío de Resultados\n6️⃣ Dudas\n\nPor favor, selecciona una opción para comenzar…"
+        "body": "👋 ¡Hola! Bienvenido(a) a Milkiin, donde cada paso en tu camino a la maternidad cuenta.\n✨ Soy MilkiBot, tu asistente virtual, y estoy aquí para ayudarte con todo lo que necesites.\n\n¿En qué te puedo apoyar hoy?\n1- Paciente de primera vez\n2- Paciente subsecuente\n3- Atención al cliente\n4- Facturación\n5- Envío de Resultados\n6- Dudas\n\nPor favor, selecciona una opción para comenzar..."
     }
 }
 
 SERVICIOS_PRIMERA_VEZ = {
     "type": "text",
     "text": {
-        "body": "Selecciona el servicio de primera vez:\n1️⃣ Fertilidad\n2️⃣ Síndrome de Ovario Poliquístico\n3️⃣ Chequeo Anual\n4️⃣ Embarazo\n5️⃣ Otros"
+        "body": "Selecciona el servicio de primera vez:\n1- Fertilidad\n2- Síndrome de Ovario Poliquístico\n3- Chequeo Anual\n4- Embarazo\n5- Otros"
     }
 }
 
 SERVICIOS_SUBSECUENTE = {
     "type": "text",
     "text": {
-        "body": "Selecciona el servicio subsecuente:\n1️⃣ Fertilidad\n2️⃣ Síndrome de Ovario Poliquístico\n3️⃣ Chequeo Anual\n4️⃣ Embarazo\n5️⃣ Revisión de estudios\n6️⃣ Seguimiento folicular\n7️⃣ Otros"
+        "body": "Selecciona el servicio subsecuente:\n1- Fertilidad\n2- Síndrome de Ovario Poliquístico\n3- Chequeo Anual\n4- Embarazo\n5- Revisión de estudios\n6- Seguimiento folicular\n7- Otros"
     }
 }
 
 OTROS_OPCIONES = {
     "type": "text",
     "text": {
-        "body": "Selecciona una opción:\n1️⃣ Espermatabioscopia directa\n2️⃣ Ginecología Pediátrica y Adolescentes\n3️⃣ Hablar con América"
+        "body": "Selecciona una opción:\n1- Espermatabioscopia directa\n2- Ginecología Pediátrica y Adolescentes\n3- Hablar con América"
     }
 }
 
 ESPECIALISTAS = {
     "type": "text",
     "text": {
-        "body": "Selecciona tu especialista:\n1️⃣ Dra. Mónica Olavarría\n2️⃣ Dra. Graciela Guadarrama\n3️⃣ Dra. Cinthia Ruiz\n4️⃣ Dra. Gisela Cuevas\n5️⃣ Dra. Gabriela Sánchez"
+        "body": "Selecciona tu especialista:\n1- Dra. Mónica Olavarría\n2- Dra. Graciela Guadarrama\n3- Dra. Cinthia Ruiz\n4- Dra. Gisela Cuevas\n5- Dra. Gabriela Sánchez"
     }
 }
 
 HORARIOS_PRIMERA_VEZ = {
     "type": "text",
     "text": {
-        "body": "Estos son los horarios establecidos:\nLunes de 9:00 – 19:00 hrs (hora de comida 13:00 – 14:00 hrs)\nMartes 9:00 - 11:00 hrs\nMiércoles 15:00 – 20:00 hrs\nJueves 9:00 – 12:00 hrs / 15:00 – 18:00 hrs\nViernes 9:00 – 15:00 hrs\nSábado 10:00 – 11:30 hrs (solo consultas de fertilidad y sop)"
+        "body": "Estos son los horarios establecidos:\nLunes de 9:00-19:00 hrs (hora de comida 13:00-14:00 hrs)\nMartes 9:00-11:00 hrs\nMiércoles 15:00-20:00 hrs\nJueves 9:00-12:00 hrs / 15:00-18:00 hrs\nViernes 9:00-15:00 hrs\nSábado 10:00-11:30 hrs (solo consultas de fertilidad y sop)"
     }
 }
 
 HORARIOS_SUBSECUENTE = {
     "type": "text",
     "text": {
-        "body": "Estos son los horarios establecidos:\nLunes de 9:00 – 19:00 hrs (hora de comida 13:00 – 14:00 hrs)\nMartes 9:00 - 11:00 hrs\nMiércoles 15:00 – 20:00 hrs\nJueves 9:00 – 12:00 hrs / 15:00 – 18:00 hrs\nViernes 9:00 – 15:00 hrs\nSábado 8:00 – 15:00 hrs (solo consultas de infertilidad y sop)"
+        "body": "Estos son los horarios establecidos:\nLunes de 9:00-19:00 hrs (hora de comida 13:00-14:00 hrs)\nMartes 9:00-11:00 hrs\nMiércoles 15:00-20:00 hrs\nJueves 9:00-12:00 hrs / 15:00-18:00 hrs\nViernes 9:00-15:00 hrs\nSábado 8:00-15:00 hrs (solo consultas de infertilidad y sop)"
     }
 }
 
 COSTOS = {
     "type": "text",
     "text": {
-        "body": "💰 Nuestros costos:\n• PAQUETE CHECK UP: El costo es de $1,800 pesos (incluye papanicolaou, USG , revisión de mamas, colposcopia y consulta)\n• CONSULTA DE FERTILIDAD: El costo es de $1,500 pesos. (incluye ultrasonido)\n• CONSULTA PRENATAL: El costo es de $1,500 pesos. (incluye ultrasonido)\n• ESPERMABIOTOSCOPIA: $1,500 pesos\n• ESPERMABIOTOSCOPIA CON FRAGMENTACIÓN: $4,500 pesos\n\nPara otros costos (hablar con America)"
+        "body": "💰 Nuestros costos:\n• PAQUETE CHECK UP: El costo es de $1,800 pesos (incluye papanicolaou, USG, revisión de mamas, colposcopia y consulta)\n• CONSULTA DE FERTILIDAD: El costo es de $1,500 pesos. (incluye ultrasonido)\n• CONSULTA PRENATAL: El costo es de $1,500 pesos. (incluye ultrasonido)\n• ESPERMABIOTOSCOPIA: $1,500 pesos\n• ESPERMABIOTOSCOPIA CON FRAGMENTACIÓN: $4,500 pesos\n\nPara otros costos (hablar con America)"
     }
 }
 
@@ -106,17 +106,17 @@ CONFIRMACION = {
 INFO_IMPORTANTE = {
     "type": "text",
     "text": {
-        "body": "Te compartimos una información importante: 📌 Para consultas de primera vez, solicitamos un anticipo de $500 MXN. El monto restante se cubrirá el día de tu consulta, una vez finalizada.\nEsta medida nos permite asegurar tu lugar, ya que contamos con alta demanda.\n\nDatos para pago:\nBanco: BBVA\nCuenta: 048 482 8712\nCLABE: 012 180 0048 4828712 2\n\nFavor de enviar su comprobante de pago al correo milkiin.gine@gmail.com"
+        "body": "Te compartimos una información importante: 📌 Para consultas de primera vez, solicitamos un anticipo de $500 MXN.\nEl monto restante se cubrirá el día de tu consulta, una vez finalizada.\nEsta medida nos permite asegurar tu lugar, ya que contamos con alta demanda.\n\nDatos para pago:\nBanco: BBVA\nCuenta: 048 482 8712\nCLABE: 012 180 0048 4828712 2\n\nFavor de enviar su comprobante de pago al correo milkiin.gine@gmail.com"
     }
 }
 
 # MAPEOS
 ESPECIALISTAS_NOMBRES = {
-    "1": "Dra. Mónica Olavarría",
-    "2": "Dra. Graciela Guadarrama",
-    "3": "Dra. Cinthia Ruiz",
-    "4": "Dra. Gisela Cuevas",
-    "5": "Dra. Gabriela Sánchez"
+    "1": "Dra. Mónica Olavarría", # ✅ todas las categorías, menos pediátricas
+    "2": "Dra. Graciela Guadarrama", # ✅ Todas las categorías menos SOP e infertilidad
+    "3": "Dra. Cinthia Ruiz", # ✅ todas las categorías menos SOP e infertilidad
+    "4": "Dra. Gisela Cuevas", # ✅ todas las categorías, menos pediátricas
+    "5": "Dra. Gabriela Sánchez" # ✅ todas las categorías menos SOP e infertilidad
 }
 
 SERVICIOS_NOMBRES = {
@@ -153,7 +153,7 @@ DURACIONES_SUBSECUENTE = {
     "4": 45, # Embarazo
     "5": 30, # Revisión de estudios
     "6": 30, # Seguimiento folicular
-    "7": 30  # Otros
+    "7": 30  # Otros (Revisión de estudios)
 }
 
 # === FUNCIONES PARA WHATSAPP META API ===
@@ -254,13 +254,13 @@ def process_user_message(phone_number, message_body):
             user_data["stage"] = "atencion_cliente"
             send_whatsapp_message(phone_number, {
                 "type": "text",
-                "text": {"body": "1️⃣ COSTOS\n2️⃣ Hablar con América"}
+                "text": {"body": "1- COSTOS\n2- Hablar con America"}
             })
         elif message_body == "4":
             user_data["stage"] = "facturacion"
             send_whatsapp_message(phone_number, {
                 "type": "text",
-                "text": {"body": "1️⃣ Requiero factura\n2️⃣ Dudas"}
+                "text": {"body": "1- Requiero factura\n2- Dudas"}
             })
         elif message_body == "5":
             send_whatsapp_message(phone_number, {
@@ -272,7 +272,7 @@ def process_user_message(phone_number, message_body):
         elif message_body == "6":
             send_whatsapp_message(phone_number, {
                 "type": "text",
-                "text": {"body": "💬 ¿Tienes alguna duda o necesitas asistencia personalizada?\n\nPor favor, escríbenos brevemente tu consulta y en unos momentos te conectaremos con un miembro de nuestro equipo.\n\n👩‍⚕️ Estamos aquí para ayudarte…"}
+                "text": {"body": "💬 ¿Tienes alguna duda o necesitas asistencia personalizada?\n\nPor favor, escríbenos brevemente tu consulta y en unos momentos te conectaremos con un miembro de nuestro equipo.\n\n👩‍⚕️ Estamos aquí para ayudarte..."}
             })
             user_data["stage"] = "dudas"
         else:
