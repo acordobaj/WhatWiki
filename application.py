@@ -21,7 +21,7 @@ user_data_storage = {}
 WELCOME_MESSAGE = {
     "type": "text",
     "text": {
-        "body": "¡Hola! Bienvenido(a) a Milkiin, donde cada paso en tu camino a la maternidad cuenta.\n\nSoy MilkiBot, tu asistente virtual, y estoy aquí para ayudarte con todo lo que necesites.\n\n¿En qué te puedo apoyar hoy?\n1️⃣ Paciente de primera vez\n2️⃣ Paciente subsecuente\n3️⃣ Atención al cliente\n4️⃣ Facturación\n5️⃣ Envío de Resultados\n6️⃣ Dudas"
+        "body": "👋 ¡Hola! Bienvenido(a) a Milkiin, donde cada paso en tu camino a la maternidad cuenta. ✨ Soy MilkiBot, tu asistente virtual, y estoy aquí para ayudarte con todo lo que necesites.\n\n¿En qué te puedo apoyar hoy?\n\n1️⃣ Paciente de primera vez\n2️⃣ Paciente subsecuente\n3️⃣ Atención al cliente\n4️⃣ Facturación\n5️⃣ Envío de Resultados\n6️⃣ Dudas"
     }
 }
 
@@ -72,19 +72,18 @@ HORARIOS_SUBSECUENTE = {
     }
 }
 
-# COSTOS
+# === MENSAJES DE RESPUESTA MODIFICADOS ===
 COSTOS = {
     "type": "text",
     "text": {
-        "body": "💰 Nuestros costos:\n• PAQUETE CHECK UP: $1,800 pesos\n• CONSULTA DE FERTILIDAD: $1,500 pesos\n• CONSULTA PRENATAL: $1,500 pesos\n• ESPERMABIOTOSCOPIA: $1,500 pesos\n• CON FRAGMENTACIÓN: $4,500 pesos"
+        "body": "💰 Nuestros costos:\n\n• PAQUETE CHECK UP: $1,800 pesos (incluye papanicolaou, USG , revisión de mamas, colposcopia y consulta)\n• CONSULTA DE FERTILIDAD: $1,500 pesos. (incluye ultrasonido)\n• CONSULTA PRENATAL: $1,500 pesos. (incluye ultrasonido)\n• ESPERMABIOTOSCOPIA: $1,500 pesos\n• ESPERMABIOTOSCOPIA CON FRAGMENTACIÓN: $4,500 pesos"
     }
 }
 
-# CONFIRMACIÓN FINAL
 CONFIRMACION = {
     "type": "text",
     "text": {
-        "body": "¡Gracias por agendar tu cita con Milkiin! 🎉\n\n📍 Te esperamos en:\nInsurgentes Sur 1160, 6º piso, Colonia Del Valle.\n\n💳 Aceptamos pagos con tarjeta (incluyendo AMEX) y en efectivo.\n\n⏰ Recordatorio importante:\nEn caso de cancelación, es necesario avisar con mínimo 72 horas de anticipación para poder realizar el reembolso del anticipo y reprogramar tu cita.\n\nAgradecemos tu comprensión y tu confianza. ❤️"
+        "body": "✅ ¡Gracias por agendar tu cita con Milkiin!\n\n📍 Te esperamos en: Insurgentes Sur 1160, 6º piso, Colonia Del Valle. \n🗺️ [Ubicación en Google Maps](https://www.google.com/maps/place/Milkiin+Cl%C3%ADnica+de+Fertilidad+y+Ginecolog%C3%ADa/@19.399996,-99.1677353,17z/data=!3m1!4b1!4m6!3m5!1s0x85d1ff389d316335:0x1b4b62f4476a88b8!8m2!3d19.399991!4d-99.1651604!16s%2Fg%2F11c6k7d36j)\n\n💳 Aceptamos pagos con tarjeta (incluyendo AMEX) y en efectivo.\n\n⏰ En caso de cancelación, es necesario avisar con mínimo 72 horas de anticipación para poder realizar el reembolso del anticipo y reprogramar tu cita. Si no se cumple con este plazo, lamentablemente no podremos hacer el reembolso.\n\nAgradecemos tu comprensión y tu confianza. Estamos para acompañarte con profesionalismo y cariño en cada paso ❤️. Si tienes alguna duda o necesitas apoyo adicional, no dudes en escribirnos."
     }
 }
 
@@ -319,7 +318,7 @@ def process_user_message(phone_number, message_body):
         pago_info = {
             "type": "text",
             "text": {
-                "body": "Te compartimos una información importante:\n\nPara consultas de primera vez, solicitamos un anticipo de $500 MXN.\n\nDatos para pago:\nBanco: BBVA\nCuenta: 048 482 8712\nCLABE: 012180004848287122\n\nFavor de enviar comprobante a: milkiin.gine@gmail.com"
+                "body": "Te compartimos una información importante: 📌 Para consultas de primera vez, solicitamos un anticipo de $500 MXN. El monto restante se cubrirá el día de tu consulta, una vez finalizada. Esta medida nos permite asegurar tu lugar, ya que contamos con alta demanda.\n\nFavor de enviar su comprobante de pago al correo: milkiin.gine@gmail.com\n\nDatos para pago:\nBanco: BBVA\nCuenta: 048 482 8712\nCLABE: 012180004848287122"
             }
         }
         send_whatsapp_message(phone_number, pago_info)
@@ -453,7 +452,7 @@ def process_user_message(phone_number, message_body):
         if message_body == "1":
             send_whatsapp_message(phone_number, {
                 "type": "text",
-                "text": {"body": "Por favor, completa el formulario:\n🔗 [Formulario de facturación](https://forms.gle/tuformulario)"}
+                "text": {"body": "Por favor, completa el formulario:\n🔗 [Formulario de facturación](https://docs.google.com/forms/d/e/1FAIpQLSfr1WWXWQGx4sZj3_0FnIp6XWBb1mol4GfVGfymflsRI0E5pA/viewform)"}
             })
         elif message_body == "2":
             send_whatsapp_message(phone_number, {
@@ -482,11 +481,10 @@ def process_user_message(phone_number, message_body):
 
 # === WEBHOOKS DE META ===
 
-@application.route('/webhook/', methods=['GET', 'POST']) # <--- MODIFICACIÓN CRÍTICA
+@application.route('/webhook/', methods=['GET', 'POST'])
 def webhook():
     """Webhook para recibir mensajes de WhatsApp Meta API"""
     if request.method == 'GET':
-        # Verificación inicial de webhook
         mode = request.args.get('hub.mode')
         token = request.args.get('hub.verify_token')
         challenge = request.args.get('hub.challenge')
@@ -501,7 +499,6 @@ def webhook():
                 return 'Verificación fallida', 403
     
     elif request.method == 'POST':
-        # Procesar mensajes entrantes
         try:
             data = request.get_json()
             print(f"📥 Datos recibidos: {json.dumps(data, indent=2)}")
@@ -516,7 +513,6 @@ def webhook():
                                     phone_number = message['from']
                                     message_body = message.get('text', {}).get('body', '')
                                     
-                                    # Procesar el mensaje
                                     process_user_message(phone_number, message_body)
             
             return 'EVENT_RECEIVED', 200
@@ -562,7 +558,6 @@ def test_webhook():
         "endpoint": "/webhook",
         "methods": ["GET", "POST"]
     })
-
 
 if __name__ == "__main__":
     pass
