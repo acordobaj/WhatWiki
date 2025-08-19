@@ -3,7 +3,7 @@ from flask import Flask, request, jsonify
 import requests
 import json
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
 import os
 import logging
 
@@ -17,7 +17,7 @@ application = Flask(__name__)
 # === CONFIGURACIÓN DE VARIABLES DE ENTORNO ===
 # Usa variables de entorno (recomendado) o valores por defecto
 META_ACCESS_TOKEN = os.environ.get('META_ACCESS_TOKEN')
-META_PHONE_NUMBER_ID = os.environ.get('META_PHONE_NUMBER_ID')
+META_PHONE_NUMBER_ID = os.environ.get('META_PHONE_NUMBER_ID', '799601806561220')
 META_VERIFY_TOKEN = os.environ.get('META_VERIFY_TOKEN')
 
 # Valores por defecto (solo para desarrollo - ¡no usar en producción!)
@@ -27,7 +27,7 @@ if not META_ACCESS_TOKEN:
 
 if not META_PHONE_NUMBER_ID:
     logger.warning("⚠️ META_PHONE_NUMBER_ID no definido.")
-    META_PHONE_NUMBER_ID = "123456789012345"  # Reemplaza
+    META_PHONE_NUMBER_ID = "799601806561220"
 
 if not META_VERIFY_TOKEN:
     logger.warning("⚠️ META_VERIFY_TOKEN no definido.")
@@ -41,63 +41,70 @@ user_data_storage = {}
 WELCOME_MESSAGE = {
     "type": "text",
     "text": {
-        "body": "¡Hola! Bienvenido(a) a Milkiin, donde cada paso en tu camino a la maternidad cuenta.\n\nSoy MilkiBot, tu asistente virtual, y estoy aquí para ayudarte con todo lo que necesites.\n\n¿En qué te puedo apoyar hoy?\n1️⃣ Paciente de primera vez\n2️⃣ Paciente subsecuente\n3️⃣ Atención al cliente\n4️⃣ Facturación\n5️⃣ Envío de Resultados\n6️⃣ Dudas"
+        "body": "👋 ¡Hola! Bienvenido(a) a Milkiin, donde cada paso en tu camino a la maternidad cuenta.\n✨ Soy MilkiBot, tu asistente virtual, y estoy aquí para ayudarte con todo lo que necesites.\n\n¿En qué te puedo apoyar hoy?\n1- Paciente de primera vez\n2- Paciente subsecuente\n3- Atención al cliente\n4- Facturación\n5- Envío de Resultados\n6- Dudas\n\nPor favor, selecciona una opción para comenzar..."
     }
 }
 
 SERVICIOS_PRIMERA_VEZ = {
     "type": "text",
     "text": {
-        "body": "Selecciona el servicio de primera vez:\n1️⃣ Fertilidad\n2️⃣ Síndrome de Ovario Poliquístico\n3️⃣ Chequeo Anual\n4️⃣ Embarazo\n5️⃣ Otros"
+        "body": "Selecciona el servicio de primera vez:\n1- Fertilidad\n2- Síndrome de Ovario Poliquístico\n3- Chequeo Anual\n4- Embarazo\n5- Otros"
     }
 }
 
 SERVICIOS_SUBSECUENTE = {
     "type": "text",
     "text": {
-        "body": "Selecciona el servicio subsecuente:\n1️⃣ Fertilidad\n2️⃣ Síndrome de Ovario Poliquístico\n3️⃣ Chequeo Anual\n4️⃣ Embarazo\n5️⃣ Revisión de estudios\n6️⃣ Seguimiento folicular\n7️⃣ Otros"
+        "body": "Selecciona el servicio subsecuente:\n1- Fertilidad\n2- Síndrome de Ovario Poliquístico\n3- Chequeo Anual\n4- Embarazo\n5- Revisión de estudios\n6- Seguimiento folicular\n7- Otros"
     }
 }
 
 OTROS_OPCIONES = {
     "type": "text",
     "text": {
-        "body": "Selecciona una opción:\n1️⃣ Espermabiopsia directa\n2️⃣ Ginecología Pediátrica y Adolescentes\n3️⃣ Hablar con América"
+        "body": "Selecciona una opción:\n1- Espermatabioscopia directa\n2- Ginecología Pediátrica y Adolescentes\n3- Hablar con América"
     }
 }
 
 ESPECIALISTAS = {
     "type": "text",
     "text": {
-        "body": "Selecciona tu especialista:\n1️⃣ Dra. Mónica Olavarría\n2️⃣ Dra. Graciela Guadarrama\n3️⃣ Dra. Cinthia Ruiz\n4️⃣ Dra. Gisela Cuevas\n5️⃣ Dra. Gabriela Sánchez"
+        "body": "Selecciona tu especialista:\n1- Dra. Mónica Olavarría\n2- Dra. Graciela Guadarrama\n3- Dra. Cinthia Ruiz\n4- Dra. Gisela Cuevas\n5- Dra. Gabriela Sánchez"
     }
 }
 
 HORARIOS_PRIMERA_VEZ = {
     "type": "text",
     "text": {
-        "body": "Lunes: 9:00 – 19:00 hrs (comida 13:00–14:00)\nMartes: 9:00–11:00 hrs\nMiércoles: 15:00–20:00 hrs\nJueves: 9:00–12:00 / 15:00–18:00 hrs\nViernes: 9:00–15:00 hrs\nSábado: 10:00–11:30 hrs (solo fertilidad y SOP)"
+        "body": "Estos son los horarios establecidos:\nLunes de 9:00-19:00 hrs (hora de comida 13:00-14:00 hrs)\nMartes 9:00-11:00 hrs\nMiércoles 15:00-20:00 hrs\nJueves 9:00-12:00 hrs / 15:00-18:00 hrs\nViernes 9:00-15:00 hrs\nSábado 10:00-11:30 hrs (solo consultas de fertilidad y sop)"
     }
 }
 
 HORARIOS_SUBSECUENTE = {
     "type": "text",
     "text": {
-        "body": "Lunes: 9:00 – 19:00 hrs (comida 13:00–14:00)\nMartes: 9:00–11:00 hrs\nMiércoles: 15:00–20:00 hrs\nJueves: 9:00–12:00 / 15:00–18:00 hrs\nViernes: 9:00–15:00 hrs\nSábado: 8:00–15:00 hrs (solo fertilidad y SOP)"
+        "body": "Estos son los horarios establecidos:\nLunes de 9:00-19:00 hrs (hora de comida 13:00-14:00 hrs)\nMartes 9:00-11:00 hrs\nMiércoles 15:00-20:00 hrs\nJueves 9:00-12:00 hrs / 15:00-18:00 hrs\nViernes 9:00-15:00 hrs\nSábado 8:00-15:00 hrs (solo consultas de infertilidad y sop)"
     }
 }
 
 COSTOS = {
     "type": "text",
     "text": {
-        "body": "💰 Nuestros costos:\n• PAQUETE CHECK UP: $1,800 pesos\n• CONSULTA DE FERTILIDAD: $1,500 pesos\n• CONSULTA PRENATAL: $1,500 pesos\n• ESPERMABIOTOSCOPIA: $1,500 pesos\n• CON FRAGMENTACIÓN: $4,500 pesos"
+        "body": "💰 Nuestros costos:\n• PAQUETE CHECK UP: El costo es de $1,800 pesos (incluye papanicolaou, USG, revisión de mamas, colposcopia y consulta)\n• CONSULTA DE FERTILIDAD: El costo es de $1,500 pesos. (incluye ultrasonido)\n• CONSULTA PRENATAL: El costo es de $1,500 pesos. (incluye ultrasonido)\n• ESPERMABIOTOSCOPIA: $1,500 pesos\n• ESPERMABIOTOSCOPIA CON FRAGMENTACIÓN: $4,500 pesos\n\nPara otros costos (hablar con America)"
     }
 }
 
 CONFIRMACION = {
     "type": "text",
     "text": {
-        "body": "¡Gracias por agendar tu cita con Milkiin! 🎉\n\n📍 Te esperamos en:\nInsurgentes Sur 1160, 6º piso, Colonia Del Valle.\n\n💳 Aceptamos pagos con tarjeta (incluyendo AMEX) y en efectivo.\n\n⏰ Recordatorio importante:\nEn caso de cancelación, es necesario avisar con mínimo 72 horas de anticipación para poder realizar el reembolso del anticipo y reprogramar tu cita.\n\nAgradecemos tu comprensión y tu confianza. ❤️"
+        "body": "✅ ¡Gracias por agendar tu cita con Milkiin!\n\n📍 Te esperamos en: Insurgentes Sur 1160, 6º piso, Colonia Del Valle. 🗺️ Ubicación en Google Maps\n\n💳 Aceptamos pagos con tarjeta (incluyendo AMEX) y en efectivo."
+    }
+}
+
+INFO_IMPORTANTE = {
+    "type": "text",
+    "text": {
+        "body": "Te compartimos una información importante: 📌 Para consultas de primera vez, solicitamos un anticipo de $500 MXN.\nEl monto restante se cubrirá el día de tu consulta, una vez finalizada.\nEsta medida nos permite asegurar tu lugar, ya que contamos con alta demanda.\n\nDatos para pago:\nBanco: BBVA\nCuenta: 048 482 8712\nCLABE: 012 180 0048 4828712 2\n\nFavor de enviar su comprobante de pago al correo milkiin.gine@gmail.com"
     }
 }
 
@@ -130,21 +137,21 @@ SERVICIOS_SUB_NOMBRES = {
 
 # DURACIONES (en minutos)
 DURACIONES_PRIMERA_VEZ = {
-    "1": 90,
-    "2": 60,
-    "3": 60,
-    "4": 60,
-    "5": 30
+    "1": 90, # Fertilidad
+    "2": 60, # SOP
+    "3": 60, # Chequeo Anual
+    "4": 60, # Embarazo
+    "5": 30  # Otros
 }
 
 DURACIONES_SUBSECUENTE = {
-    "1": 45,
-    "2": 45,
-    "3": 45,
-    "4": 45,
-    "5": 30,
-    "6": 30,
-    "7": 30
+    "1": 45, # Fertilidad (general)
+    "2": 45, # SOP
+    "3": 45, # Chequeo Anual
+    "4": 45, # Embarazo
+    "5": 30, # Revisión de estudios
+    "6": 30, # Seguimiento folicular
+    "7": 30  # Otros
 }
 
 # === FUNCIONES PARA WHATSAPP META API ===
@@ -192,24 +199,18 @@ def extract_user_data(message_body):
     data = {}
     lines = message_body.split('\n')
     
-    # ✅ Cambio: Lógica para manejar entrada separada por comas en una sola línea
+    # ✅ Lógica para manejar entrada separada por comas en una sola línea
     if len(lines) == 1 and ',' in lines[0]:
         parts = lines[0].split(',')
-        # Asumimos que el nombre está en la primera parte
-        data['nombre'] = parts[0].strip()
-        
-        # Opcional: Intentar extraer otros datos de la misma línea
-        for part in parts[1:]:
-            if '@' in part and '.' in part:
-                match = re.search(r'[\w\.-]+@[\w\.-]+\.\w+', part)
-                if match:
-                    data['correo'] = match.group(0)
-            elif re.search(r'\d{10,}', part):
-                phone_match = re.search(r'\d{10,}', part)
-                if phone_match:
-                    data['telefono'] = phone_match.group(0)
+        if len(parts) >= 1:
+            data['nombre'] = parts[0].strip()
+        if len(parts) >= 2:
+            data['correo'] = parts[1].strip()
+        if len(parts) >= 3:
+            data['telefono'] = parts[2].strip()
+        # La lógica actual no extrae fecha y edad de la misma línea, solo las solicita
     else:
-        # Lógica original para manejar líneas separadas por saltos de línea o con dos puntos
+        # Lógica original para manejar líneas separadas por saltos de línea
         for line in lines:
             if 'nombre' in line.lower() or 'paciente' in line.lower():
                 if ':' in line:
@@ -224,7 +225,7 @@ def extract_user_data(message_body):
                 phone_match = re.search(r'\d{10,}', line)
                 if phone_match:
                     data['telefono'] = phone_match.group(0)
-                    
+    
     return data
 
 # === PROCESAMIENTO DE MENSAJES ===
@@ -251,25 +252,25 @@ def process_user_message(phone_number, message_body):
             user_data["stage"] = "atencion_cliente"
             send_whatsapp_message(phone_number, {
                 "type": "text",
-                "text": {"body": "1️⃣ COSTOS\n2️⃣ Hablar con América"}
+                "text": {"body": "1- COSTOS\n2- Hablar con America"}
             })
         elif message_body == "4":
             user_data["stage"] = "facturacion"
             send_whatsapp_message(phone_number, {
                 "type": "text",
-                "text": {"body": "1️⃣ Requiero factura\n2️⃣ Dudas"}
+                "text": {"body": "1- Requiero factura\n2- Dudas"}
             })
         elif message_body == "5":
             send_whatsapp_message(phone_number, {
                 "type": "text",
-                "text": {"body": "Para el envío de resultados, envíalos al correo:\n📧 gine.moni.og@gmail.com"}
+                "text": {"body": "📑 Para el envío de resultados de análisis, por favor envíalos al siguiente correo: 📬 gine.moni.og@gmail.com\n\nNos aseguraremos de revisarlos con oportunidad antes de tu consulta. ¡Gracias por tu colaboración!"}
             })
             send_whatsapp_message(phone_number, WELCOME_MESSAGE)
             user_data["stage"] = "option_selected"
         elif message_body == "6":
             send_whatsapp_message(phone_number, {
                 "type": "text",
-                "text": {"body": "¿Tienes alguna duda? Escríbenos brevemente tu consulta y en breve te conectaremos con un miembro del equipo."}
+                "text": {"body": "💬 ¿Tienes alguna duda o necesitas asistencia personalizada?\n\nPor favor, escríbenos brevemente tu consulta y en unos momentos te conectaremos con un miembro de nuestro equipo.\n\n👩‍⚕️ Estamos aquí para ayudarte..."}
             })
             user_data["stage"] = "dudas"
         else:
@@ -312,7 +313,7 @@ def process_user_message(phone_number, message_body):
             user_data["stage"] = "datos_paciente"
             send_whatsapp_message(phone_number, {
                 "type": "text",
-                "text": {"body": "Por favor, envía:\nNombre completo\nCorreo electrónico\nTeléfono\nFecha de nacimiento\nEdad"}
+                "text": {"body": "Por favor, envía:\nNombre completo\nCorreo electrónico\nTeléfono\nFecha de nacimiento\nEdad\n\n*Recuerda que también puedes enviarlo en una sola línea separado por comas."}
             })
         else:
             send_whatsapp_message(phone_number, {
@@ -326,13 +327,7 @@ def process_user_message(phone_number, message_body):
         user_data_storage[phone_number] = user_info
         user_data["stage"] = "mostrar_horarios"
         send_whatsapp_message(phone_number, HORARIOS_PRIMERA_VEZ)
-        pago_info = {
-            "type": "text",
-            "text": {
-                "body": "Te compartimos una información importante:\n\nPara consultas de primera vez, solicitamos un anticipo de $500 MXN.\n\nDatos para pago:\nBanco: BBVA\nCuenta: 048 482 8712\nCLABE: 012180004848287122\n\nFavor de enviar comprobante a: milkiin.gine@gmail.com"
-            }
-        }
-        send_whatsapp_message(phone_number, pago_info)
+        send_whatsapp_message(phone_number, INFO_IMPORTANTE)
         user_data["stage"] = "esperando_fecha"
 
     # Flujo subsecuente
@@ -342,7 +337,7 @@ def process_user_message(phone_number, message_body):
             user_data["stage"] = "datos_subsecuente"
             send_whatsapp_message(phone_number, {
                 "type": "text",
-                "text": {"body": "Por favor, envía:\nNombre completo\nCorreo electrónico\nTeléfono\nFecha de nacimiento\nEdad"}
+                "text": {"body": "Por favor, envía:\nNombre completo\nCorreo electrónico\nTeléfono\nFecha de nacimiento\nEdad\n\n*Recuerda que también puedes enviarlo en una sola línea separado por comas."}
             })
         elif message_body == "7":
             user_data["servicio"] = "7"
@@ -366,7 +361,7 @@ def process_user_message(phone_number, message_body):
             user_data["stage"] = "datos_subsecuente"
             send_whatsapp_message(phone_number, {
                 "type": "text",
-                "text": {"body": "Por favor, envía:\nNombre completo\nCorreo electrónico\nTeléfono\nFecha de nacimiento\nEdad"}
+                "text": {"body": "Por favor, envía:\nNombre completo\nCorreo electrónico\nTeléfono\nFecha de nacimiento\nEdad\n\n*Recuerda que también puedes enviarlo en una sola línea separado por comas."}
             })
 
     elif user_data["stage"] == "datos_subsecuente":
@@ -387,13 +382,23 @@ def process_user_message(phone_number, message_body):
             servicio = user_data["servicio"]
             duracion = DURACIONES_PRIMERA_VEZ.get(servicio, 60)
             especialista = ESPECIALISTAS_NOMBRES.get(user_data["especialista"], "No definido")
-            nombre_paciente = user_info.get('nombre', 'Paciente')
-            servicio_nombre = SERVICIOS_NOMBRES.get(servicio, "Consulta")
+            
+            # ✅ Enviar mensajes de confirmación (sin el enlace del calendario)
             send_whatsapp_message(phone_number, CONFIRMACION)
+            
+            cancelacion_info = {
+                "type": "text",
+                "text": {
+                    "body": "📅 En caso de cancelación, es necesario avisar con mínimo 72 horas de anticipación para poder realizar el reembolso del anticipo y reprogramar tu cita. ⏳ Si no se cumple con este plazo, lamentablemente no podremos hacer el reembolso.\n\nAgradecemos tu comprensión y tu confianza. Estamos para acompañarte con profesionalismo y cariño en cada paso 🤍\n\nSi tienes alguna duda o necesitas apoyo adicional, no dudes en escribirnos. ¡Será un gusto atenderte! 🤍"
+                }
+            }
+            send_whatsapp_message(phone_number, cancelacion_info)
+
+            # Este es el mensaje de detalle de la cita
             cita_detalle = {
                 "type": "text",
                 "text": {
-                    "body": f"📅 CONFIRMACIÓN DE CITA\n\nPaciente: {nombre_paciente}\nServicio: {servicio_nombre}\nEspecialista: {especialista}\nFecha y hora: {message_body}\nDuración estimada: {duracion} minutos"
+                    "body": f"📅 CONFIRMACIÓN DE CITA\n\nServicio: {SERVICIOS_NOMBRES.get(servicio, 'Consulta')}\nEspecialista: {especialista}\nFecha y hora: {message_body}\nDuración estimada: {duracion} minutos"
                 }
             }
             send_whatsapp_message(phone_number, cita_detalle)
@@ -410,13 +415,18 @@ def process_user_message(phone_number, message_body):
             servicio = user_data["servicio"]
             duracion = DURACIONES_SUBSECUENTE.get(servicio, 45)
             especialista = ESPECIALISTAS_NOMBRES.get("1", "Dra. Mónica Olavarría")
-            nombre_paciente = user_info.get('nombre', 'Paciente')
-            servicio_nombre = SERVICIOS_SUB_NOMBRES.get(servicio, "Consulta")
-            send_whatsapp_message(phone_number, CONFIRMACION)
+            
+            # ✅ Enviar mensajes de confirmación (sin el enlace del calendario)
+            send_whatsapp_message(phone_number, {
+                "type": "text",
+                "text": {"body": "✅ ¡Gracias por agendar tu cita con Milkiin!\n\n📍 Te esperamos en: Insurgentes Sur 1160, 6º piso, Colonia Del Valle. 🗺️ Ubicación en Google Maps\n\n💳 Aceptamos pagos con tarjeta (incluyendo AMEX) y en efectivo.\n\nSi tienes alguna duda o necesitas apoyo adicional, no dudes en escribirnos."}
+            })
+            
+            # Este es el mensaje de detalle de la cita
             cita_detalle = {
                 "type": "text",
                 "text": {
-                    "body": f"📅 CONFIRMACIÓN DE CITA\n\nPaciente: {nombre_paciente}\nServicio: {servicio_nombre}\nEspecialista: {especialista}\nFecha y hora: {message_body}\nDuración estimada: {duracion} minutos"
+                    "body": f"📅 CONFIRMACIÓN DE CITA\n\nServicio: {SERVICIOS_SUB_NOMBRES.get(servicio, 'Consulta')}\nEspecialista: {especialista}\nFecha y hora: {message_body}\nDuración estimada: {duracion} minutos"
                 }
             }
             send_whatsapp_message(phone_number, cita_detalle)
@@ -442,12 +452,12 @@ def process_user_message(phone_number, message_body):
         if message_body == "1":
             send_whatsapp_message(phone_number, {
                 "type": "text",
-                "text": {"body": "Por favor, completa el formulario:\n🔗 [Formulario de facturación](https://forms.gle/tuformulario)"}
+                "text": {"body": "📄 Por favor, completa el siguiente formulario con tus datos fiscales: 🔗 [Formulario de facturación](https://docs.google.com/forms/d/e/1FAIpQLSfr1WWXWQGx4sZj3_0FnIp6XWBb1mol4GfVGfymflsRI0E5pA/viewform)\n\nUna vez enviado, te haremos llegar tu factura en un plazo máximo de 72 horas hábiles. ¡Gracias por tu preferencia!"}
             })
         elif message_body == "2":
             send_whatsapp_message(phone_number, {
                 "type": "text",
-                "text": {"body": "Para dudas de facturación, escribe a:\n📧 lcastillo@gbcasesoria.mx"}
+                "text": {"body": "📬 Para dudas de facturación, puedes escribirnos directamente a: lcastillo@gbcasesoria.mx\n\nEstaremos encantados de ayudarte lo antes posible. ¡Gracias por tu confianza!"}
             })
         send_whatsapp_message(phone_number, WELCOME_MESSAGE)
         user_data["stage"] = "option_selected"
@@ -466,7 +476,6 @@ def process_user_message(phone_number, message_body):
         user_data["stage"] = "option_selected"
 
     user_state[phone_number] = user_data
-
 
 # === WEBHOOKS ===
 @application.route('/webhook/', methods=['GET', 'POST'])
