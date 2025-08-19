@@ -482,7 +482,7 @@ def process_user_message(phone_number, message_body):
 
 # === WEBHOOKS DE META ===
 
-@application.route('/webhook', methods=['GET', 'POST'])
+@application.route('/webhook/', methods=['GET', 'POST']) # <--- MODIFICACIÓN CRÍTICA
 def webhook():
     """Webhook para recibir mensajes de WhatsApp Meta API"""
     if request.method == 'GET':
@@ -494,7 +494,6 @@ def webhook():
         print(f"📥 Verificación de Webhook - Modo: {mode}, Token: {token}")
         
         if mode and token:
-            # CORREGIDO: Usar variable directa
             if mode == 'subscribe' and token == META_VERIFY_TOKEN:
                 print('✅ WEBHOOK_VERIFICADO')
                 return challenge
