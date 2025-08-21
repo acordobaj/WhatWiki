@@ -95,6 +95,13 @@ CONFIRMACION = {
     }
 }
 
+FINAL_MESSAGE = {
+    "type": "text",
+    "text": {
+        "body": "Conversación finalizada. Para iniciar un nuevo proceso, por favor, envía un mensaje. ¡Estamos para ayudarte! 😊"
+    }
+}
+
 # MAPEOS
 ESPECIALISTAS_NOMBRES = {
     "1": "Dra. Mónica Olavarría",
@@ -571,8 +578,12 @@ def process_user_message(phone_number, message_body):
                 }
             }
             send_whatsapp_message(phone_number, cita_detalle)
+            
+            # Reiniciar la conversación
+            send_whatsapp_message(phone_number, FINAL_MESSAGE)
             del user_state[phone_number]
-            del user_data_storage[phone_number]
+            if phone_number in user_data_storage:
+                del user_data_storage[phone_number]
         except ValueError:
             send_whatsapp_message(phone_number, {
                 "type": "text",
@@ -617,8 +628,12 @@ def process_user_message(phone_number, message_body):
                 }
             }
             send_whatsapp_message(phone_number, cita_detalle)
+            
+            # Reiniciar la conversación
+            send_whatsapp_message(phone_number, FINAL_MESSAGE)
             del user_state[phone_number]
-            del user_data_storage[phone_number]
+            if phone_number in user_data_storage:
+                del user_data_storage[phone_number]
         except ValueError:
             send_whatsapp_message(phone_number, {
                 "type": "text",
