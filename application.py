@@ -9,6 +9,11 @@ import ssl
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
+# Importaciones para iCalendar (.ics)
+
+import tempfile
+import os
+
 # Crear la aplicación Flask (cambiar 'app' por 'application' para Passenger)
 application = Flask(__name__)
 
@@ -188,18 +193,18 @@ def extract_user_data(message_body):
     return data
 
 # === ENVÍO DE CORREO ===
-def send_appointment_email(recipient_email, patient_name, doctor_name, appointment_date, appointment_time):
+def send_appointment_email(recipient_email, patient_name, doctor_name, appointment_date, appointment_time, service_type):
     if not all([EMAIL_ADDRESS, EMAIL_PASSWORD, recipient_email]):
         print("❌ Error: Faltan credenciales de correo o correo del destinatario.")
         return False
     message = MIMEMultipart("alternative")
-    message["Subject"] = "Confirmación de Cita - Milkiin"
+    message["Subject"] = f"Confirmación de Cita - {service_type}" # Se agrega el tipo de servicio en el asunto
     message["From"] = EMAIL_ADDRESS
     message["To"] = recipient_email
     text = f"""
     Hola {patient_name},
 
-    Tu cita con la Dra. {doctor_name} ha sido agendada con éxito.
+    Tu cita para {service_type} con la Dra. {doctor_name} ha sido agendada con éxito.
 
     Detalles de la cita:
     Fecha: {appointment_date}
@@ -216,7 +221,7 @@ def send_appointment_email(recipient_email, patient_name, doctor_name, appointme
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
           <h2 style="color: #4CAF50;">✅ Cita Confirmada</h2>
           <p>Hola <strong>{patient_name}</strong>,</p>
-          <p>Tu cita con la <strong>Dra. {doctor_name}</strong> ha sido agendada con éxito.</p>
+          <p>Tu cita de <strong>{service_type}</strong> con la <strong>Dra. {doctor_name}</strong> ha sido agendada con éxito.</p>
           <p>Aquí están los detalles de tu cita:</p>
           <ul>
             <li><strong>Fecha:</strong> {appointment_date}</li>
@@ -434,14 +439,15 @@ def process_user_message(phone_number, message_body):
             especialista_nombre = ESPECIALISTAS_NOMBRES.get(especialista_key, "No definido")
             nombre_paciente = user_info.get('nombre', 'Paciente Anónimo')
             
-            # NUEVA LÓGICA: Enviar correo electrónico en lugar de crear un evento de Google Calendar
+            # NUEVA LÓGICA: Enviar correo electrónico
             if user_info.get('correo'):
                 send_appointment_email(
                     user_info['correo'],
                     nombre_paciente,
                     especialista_nombre,
                     fecha_hora.strftime("%Y-%m-%d"),
-                    fecha_hora.strftime("%H:%M")
+                    fecha_hora.strftime("%H:%M"),
+                    servicio_nombre # Se pasa el nombre del servicio
                 )
             
             send_whatsapp_message(phone_number, CONFIRMACION)
@@ -471,14 +477,15 @@ def process_user_message(phone_number, message_body):
             nombre_paciente = user_info.get('nombre', 'Paciente Anónimo')
             especialista_nombre = "Por definir"
 
-            # NUEVA LÓGICA: Enviar correo electrónico en lugar de crear un evento de Google Calendar
+            # NUEVA LÓGICA: Enviar correo electrónico
             if user_info.get('correo'):
                 send_appointment_email(
                     user_info['correo'],
                     nombre_paciente,
                     especialista_nombre,
                     fecha_hora.strftime("%Y-%m-%d"),
-                    fecha_hora.strftime("%H:%M")
+                    fecha_hora.strftime("%H:%M"),
+                    servicio_nombre # Se pasa el nombre del servicio
                 )
 
             send_whatsapp_message(phone_number, CONFIRMACION)
