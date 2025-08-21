@@ -304,8 +304,8 @@ def process_user_message(phone_number, message_body):
     user_info = user_data_storage.get(phone_number, {})
     print(f"[MENSAJE ENTRANTE] {phone_number}: {message_body}")
 
-    # Nuevo bloque para reiniciar la conversación
-    if user_data["stage"] == "start" or not message_body.isdigit():
+    # Nuevo bloque para reiniciar la conversación, solo cuando el usuario está en la etapa de 'start'
+    if user_data["stage"] == "start":
         send_whatsapp_message(phone_number, WELCOME_MESSAGE)
         user_data["stage"] = "option_selected"
         user_state[phone_number] = user_data
