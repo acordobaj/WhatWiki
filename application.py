@@ -14,8 +14,6 @@ from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
-# Importaciones para iCalendar (.ics) - Se eliminan
-
 # Crear la aplicación Flask (cambiar 'app' por 'application' para Passenger)
 application = Flask(__name__)
 
@@ -27,7 +25,7 @@ META_VERIFY_TOKEN = os.environ.get('META_VERIFY_TOKEN') or 'milkiin_verify_token
 # Variables para Google Calendar
 GOOGLE_CALENDAR_CREDENTIALS_JSON = os.environ.get('GOOGLE_CALENDAR_CREDENTIALS')
 GOOGLE_CALENDAR_ID = os.environ.get('GOOGLE_CALENDAR_ID')
-SCOPES = ['https://www.googleapis.com/auth/calendar.events']  # Sin espacios extra
+SCOPES = ['https://www.googleapis.com/auth/calendar.events']
 
 # === CONFIGURACIÓN DE CORREO ELECTRÓNICO ===
 EMAIL_ADDRESS = os.environ.get('EMAIL_ADDRESS')
@@ -208,22 +206,6 @@ def format_phone_number(phone):
         return '52' + clean_phone
     return clean_phone
 
-def extract_user_data(message_body):
-    data = {}
-    lines = message_body.split('\n')
-    for line in lines:
-        if 'nombre' in line.lower() or 'paciente' in line.lower():
-            data['nombre'] = line.split(':', 1)[1].strip() if ':' in line else line
-        elif re.search(r'\d{10,}', line):
-            phone_match = re.search(r'\d{10,}', line)
-            if phone_match:
-                data['telefono'] = phone_match.group(0)
-    return data
-
-# === GENERAR ARCHIVO .ICS === - Se elimina
-
-# === ENVIAR .ICS POR WHATSAPP === - Se elimina
-
 # === GOOGLE CALENDAR ===
 def crear_evento_google_calendar(resumen, inicio, duracion_minutos, descripcion):
     try:
@@ -371,7 +353,7 @@ def process_user_message(phone_number, message_body):
                 "text": {"body": "Por favor, selecciona una opción válida del 1 al 6."}
             })
 
-    # === PRIMERA VEZ ===
+    # === FLUJO PRINCIPAL ===
     elif user_data["stage"] == "servicio_primera":
         if message_body in ["1", "2", "3", "4"]:
             user_data["servicio"] = message_body
@@ -402,10 +384,10 @@ def process_user_message(phone_number, message_body):
     elif user_data["stage"] == "especialista":
         if message_body in ["1", "2", "3", "4", "5"]:
             user_data["especialista"] = message_body
-            user_data["stage"] = "pedir_datos_sin_correo"
+            user_data["stage"] = "esperando_nombre"
             send_whatsapp_message(phone_number, {
                 "type": "text",
-                "text": {"body": "Por favor, envía:\nNombre completo\nTeléfono\nFecha de nacimiento\nEdad"}
+                "text": {"body": "Por favor, envía tu nombre completo."}
             })
         else:
             send_whatsapp_message(phone_number, {
@@ -413,11 +395,46 @@ def process_user_message(phone_number, message_body):
                 "text": {"body": "Por favor, elige una opción válida (1-5)."}
             })
 
-    elif user_data["stage"] == "pedir_datos_sin_correo":
-        extracted_data = extract_user_data(message_body)
-        user_info.update(extracted_data)
+    # === RECOLECCIÓN DE DATOS POR SEPARADO ===
+    elif user_data["stage"] == "esperando_nombre":
+        user_info["nombre"] = message_body.strip()
+        user_data["stage"] = "esperando_telefono"
         user_data_storage[phone_number] = user_info
+        send_whatsapp_message(phone_number, {
+            "type": "text",
+            "text": {"body": "Gracias. Ahora, por favor, envía tu número de teléfono."}
+        })
+
+    elif user_data["stage"] == "esperando_telefono":
+        user_info["telefono"] = message_body.strip()
+        user_data["stage"] = "esperando_fecha_nacimiento"
+        user_data_storage[phone_number] = user_info
+        send_whatsapp_message(phone_number, {
+            "type": "text",
+            "text": {"body": "Gracias. Ahora, por favor, envía tu fecha de nacimiento (DD-MM-AAAA)."}
+        })
+
+    elif user_data["stage"] == "esperando_fecha_nacimiento":
+        try:
+            # Validación de fecha, aunque no es estricta, ayuda a capturar errores
+            datetime.strptime(message_body.strip(), "%d-%m-%Y")
+            user_info["fecha_nacimiento"] = message_body.strip()
+            user_data["stage"] = "esperando_edad"
+            user_data_storage[phone_number] = user_info
+            send_whatsapp_message(phone_number, {
+                "type": "text",
+                "text": {"body": "Gracias. Por último, envía tu edad."}
+            })
+        except ValueError:
+            send_whatsapp_message(phone_number, {
+                "type": "text",
+                "text": {"body": "El formato de fecha es incorrecto. Por favor, usa el formato DD-MM-AAAA."}
+            })
+    
+    elif user_data["stage"] == "esperando_edad":
+        user_info["edad"] = message_body.strip()
         user_data["stage"] = "esperando_correo"
+        user_data_storage[phone_number] = user_info
         send_whatsapp_message(phone_number, {
             "type": "text",
             "text": {"body": "Gracias. Ahora, por favor, envíanos tu correo electrónico para enviarte la confirmación."}
@@ -452,10 +469,10 @@ def process_user_message(phone_number, message_body):
     elif user_data["stage"] == "servicio_subsecuente":
         if message_body in ["1", "2", "3", "4", "5", "6"]:
             user_data["servicio"] = message_body
-            user_data["stage"] = "datos_subsecuente"
+            user_data["stage"] = "esperando_nombre_sub" # Nueva etapa para el flujo subsecuente
             send_whatsapp_message(phone_number, {
                 "type": "text",
-                "text": {"body": "Por favor, envía:\nNombre completo\nCorreo electrónico\nTeléfono\nFecha de nacimiento\nEdad"}
+                "text": {"body": "Por favor, envía tu nombre completo."}
             })
         elif message_body == "7":
             user_data["servicio"] = "7"
@@ -476,17 +493,51 @@ def process_user_message(phone_number, message_body):
             user_data["stage"] = "start"
             send_whatsapp_message(phone_number, WELCOME_MESSAGE)
         else:
-            user_data["stage"] = "datos_subsecuente"
+            user_data["stage"] = "esperando_nombre_sub"
             send_whatsapp_message(phone_number, {
                 "type": "text",
-                "text": {"body": "Por favor, envía:\nNombre completo\nCorreo electrónico\nTeléfono\nFecha de nacimiento\nEdad"}
+                "text": {"body": "Por favor, envía tu nombre completo."}
             })
 
-    elif user_data["stage"] == "datos_subsecuente":
-        extracted_data = extract_user_data(message_body)
-        user_info.update(extracted_data)
+    # === RECOLECCIÓN DE DATOS POR SEPARADO (SUBSECUENTE) ===
+    elif user_data["stage"] == "esperando_nombre_sub":
+        user_info["nombre"] = message_body.strip()
+        user_data["stage"] = "esperando_telefono_sub"
         user_data_storage[phone_number] = user_info
+        send_whatsapp_message(phone_number, {
+            "type": "text",
+            "text": {"body": "Gracias. Ahora, por favor, envía tu número de teléfono."}
+        })
+
+    elif user_data["stage"] == "esperando_telefono_sub":
+        user_info["telefono"] = message_body.strip()
+        user_data["stage"] = "esperando_fecha_nacimiento_sub"
+        user_data_storage[phone_number] = user_info
+        send_whatsapp_message(phone_number, {
+            "type": "text",
+            "text": {"body": "Gracias. Ahora, por favor, envía tu fecha de nacimiento (DD-MM-AAAA)."}
+        })
+
+    elif user_data["stage"] == "esperando_fecha_nacimiento_sub":
+        try:
+            datetime.strptime(message_body.strip(), "%d-%m-%Y")
+            user_info["fecha_nacimiento"] = message_body.strip()
+            user_data["stage"] = "esperando_edad_sub"
+            user_data_storage[phone_number] = user_info
+            send_whatsapp_message(phone_number, {
+                "type": "text",
+                "text": {"body": "Gracias. Por último, envía tu edad."}
+            })
+        except ValueError:
+            send_whatsapp_message(phone_number, {
+                "type": "text",
+                "text": {"body": "El formato de fecha es incorrecto. Por favor, usa el formato DD-MM-AAAA."}
+            })
+    
+    elif user_data["stage"] == "esperando_edad_sub":
+        user_info["edad"] = message_body.strip()
         user_data["stage"] = "mostrar_horarios_sub"
+        user_data_storage[phone_number] = user_info
         send_whatsapp_message(phone_number, HORARIOS_SUBSECUENTE)
         send_whatsapp_message(phone_number, {
             "type": "text",
