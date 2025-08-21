@@ -10,7 +10,6 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
 # Importaciones para iCalendar (.ics)
-
 import tempfile
 import os
 
@@ -180,25 +179,13 @@ def format_phone_number(phone):
         return '52' + clean_phone
     return clean_phone
 
-def extract_user_data(message_body):
-    data = {}
-    lines = message_body.split('\n')
-    for line in lines:
-        if 'nombre' in line.lower() or 'paciente' in line.lower():
-            data['nombre'] = line.split(':', 1)[1].strip() if ':' in line else line
-        elif re.search(r'\d{10,}', line):
-            phone_match = re.search(r'\d{10,}', line)
-            if phone_match:
-                data['telefono'] = phone_match.group(0)
-    return data
-
 # === ENVÍO DE CORREO ===
-def send_appointment_email(recipient_email, patient_name, doctor_name, appointment_date, appointment_time, service_type):
+def send_appointment_email(recipient_email, patient_name, patient_phone, patient_dob, patient_age, doctor_name, appointment_date, appointment_time, service_type):
     if not all([EMAIL_ADDRESS, EMAIL_PASSWORD, recipient_email]):
         print("❌ Error: Faltan credenciales de correo o correo del destinatario.")
         return False
     message = MIMEMultipart("alternative")
-    message["Subject"] = f"Confirmación de Cita - {service_type}" # Se agrega el tipo de servicio en el asunto
+    message["Subject"] = f"Confirmación de Cita - {service_type}"
     message["From"] = EMAIL_ADDRESS
     message["To"] = recipient_email
     text = f"""
@@ -209,6 +196,12 @@ def send_appointment_email(recipient_email, patient_name, doctor_name, appointme
     Detalles de la cita:
     Fecha: {appointment_date}
     Hora: {appointment_time}
+
+    Datos del paciente:
+    Nombre: {patient_name}
+    Teléfono: {patient_phone}
+    Fecha de Nacimiento: {patient_dob}
+    Edad: {patient_age}
 
     Te esperamos en nuestras instalaciones. Si tienes alguna duda, responde a este correo.
 
@@ -226,6 +219,10 @@ def send_appointment_email(recipient_email, patient_name, doctor_name, appointme
           <ul>
             <li><strong>Fecha:</strong> {appointment_date}</li>
             <li><strong>Hora:</strong> {appointment_time}</li>
+            <li><strong>Nombre:</strong> {patient_name}</li>
+            <li><strong>Teléfono:</strong> {patient_phone}</li>
+            <li><strong>Fecha de Nacimiento:</strong> {patient_dob}</li>
+            <li><strong>Edad:</strong> {patient_age}</li>
           </ul>
           <p>¡Esperamos verte pronto!</p>
           <p>Si necesitas reagendar o tienes alguna pregunta, por favor contáctanos.</p>
@@ -335,26 +332,72 @@ def process_user_message(phone_number, message_body):
     elif user_data["stage"] == "especialista":
         if message_body in ["1", "2", "3", "4", "5"]:
             user_data["especialista"] = message_body
-            user_data["stage"] = "pedir_datos_sin_correo"
+            user_data["stage"] = "esperando_nombre"
             send_whatsapp_message(phone_number, {
                 "type": "text",
-                "text": {"body": "Por favor, envía:\nNombre completo\nTeléfono\nFecha de nacimiento\nEdad"}
+                "text": {"body": "Por favor, envía tu nombre completo."}
             })
         else:
             send_whatsapp_message(phone_number, {
                 "type": "text",
                 "text": {"body": "Por favor, elige una opción válida (1-5)."}
             })
-
-    elif user_data["stage"] == "pedir_datos_sin_correo":
-        extracted_data = extract_user_data(message_body)
-        user_info.update(extracted_data)
+    
+    elif user_data["stage"] == "esperando_nombre":
+        user_info["nombre"] = message_body.strip()
         user_data_storage[phone_number] = user_info
-        user_data["stage"] = "esperando_correo"
+        user_data["stage"] = "esperando_telefono"
         send_whatsapp_message(phone_number, {
             "type": "text",
-            "text": {"body": "Gracias. Ahora, por favor, envíanos tu correo electrónico para enviarte la confirmación."}
+            "text": {"body": "Gracias. Ahora, por favor, envía tu número de teléfono."}
         })
+
+    elif user_data["stage"] == "esperando_telefono":
+        phone_match = re.search(r'\d{10,}', message_body)
+        if phone_match:
+            user_info["telefono"] = phone_match.group(0)
+            user_data_storage[phone_number] = user_info
+            user_data["stage"] = "esperando_fecha_nacimiento"
+            send_whatsapp_message(phone_number, {
+                "type": "text",
+                "text": {"body": "Gracias. Ahora, por favor, envía tu fecha de nacimiento (ej: AAAA-MM-DD)."}
+            })
+        else:
+            send_whatsapp_message(phone_number, {
+                "type": "text",
+                "text": {"body": "El formato del teléfono es incorrecto. Por favor, inténtalo de nuevo."}
+            })
+
+    elif user_data["stage"] == "esperando_fecha_nacimiento":
+        try:
+            datetime.strptime(message_body, "%Y-%m-%d")
+            user_info["fecha_nacimiento"] = message_body.strip()
+            user_data_storage[phone_number] = user_info
+            user_data["stage"] = "esperando_edad"
+            send_whatsapp_message(phone_number, {
+                "type": "text",
+                "text": {"body": "Gracias. Ahora, por favor, envía tu edad."}
+            })
+        except ValueError:
+            send_whatsapp_message(phone_number, {
+                "type": "text",
+                "text": {"body": "El formato de la fecha es incorrecto. Por favor, usa AAAA-MM-DD."}
+            })
+
+    elif user_data["stage"] == "esperando_edad":
+        if message_body.isdigit():
+            user_info["edad"] = message_body.strip()
+            user_data_storage[phone_number] = user_info
+            user_data["stage"] = "esperando_correo"
+            send_whatsapp_message(phone_number, {
+                "type": "text",
+                "text": {"body": "Gracias. Ahora, por favor, envía tu correo electrónico para enviarte la confirmación."}
+            })
+        else:
+            send_whatsapp_message(phone_number, {
+                "type": "text",
+                "text": {"body": "Por favor, ingresa una edad válida (solo números)."}
+            })
 
     elif user_data["stage"] == "esperando_correo":
         email_match = re.search(r'[\w\.-]+@[\w\.-]+\.\w+', message_body)
@@ -385,10 +428,10 @@ def process_user_message(phone_number, message_body):
     elif user_data["stage"] == "servicio_subsecuente":
         if message_body in ["1", "2", "3", "4", "5", "6"]:
             user_data["servicio"] = message_body
-            user_data["stage"] = "datos_subsecuente"
+            user_data["stage"] = "esperando_nombre_sub"
             send_whatsapp_message(phone_number, {
                 "type": "text",
-                "text": {"body": "Por favor, envía:\nNombre completo\nCorreo electrónico\nTeléfono\nFecha de nacimiento\nEdad"}
+                "text": {"body": "Por favor, envía tu nombre completo."}
             })
         elif message_body == "7":
             user_data["servicio"] = "7"
@@ -409,23 +452,85 @@ def process_user_message(phone_number, message_body):
             user_data["stage"] = "start"
             send_whatsapp_message(phone_number, WELCOME_MESSAGE)
         else:
-            user_data["stage"] = "datos_subsecuente"
+            user_data["stage"] = "esperando_nombre_sub"
             send_whatsapp_message(phone_number, {
                 "type": "text",
-                "text": {"body": "Por favor, envía:\nNombre completo\nCorreo electrónico\nTeléfono\nFecha de nacimiento\nEdad"}
+                "text": {"body": "Por favor, envía tu nombre completo."}
             })
 
-    elif user_data["stage"] == "datos_subsecuente":
-        extracted_data = extract_user_data(message_body)
-        user_info.update(extracted_data)
+    elif user_data["stage"] == "esperando_nombre_sub":
+        user_info["nombre"] = message_body.strip()
         user_data_storage[phone_number] = user_info
-        user_data["stage"] = "mostrar_horarios_sub"
-        send_whatsapp_message(phone_number, HORARIOS_SUBSECUENTE)
+        user_data["stage"] = "esperando_telefono_sub"
         send_whatsapp_message(phone_number, {
             "type": "text",
-            "text": {"body": "Por favor, responde con la fecha y hora que prefieras (ej: 2025-04-05 10:00)"}
+            "text": {"body": "Gracias. Ahora, por favor, envía tu número de teléfono."}
         })
-        user_data["stage"] = "esperando_fecha_sub"
+
+    elif user_data["stage"] == "esperando_telefono_sub":
+        phone_match = re.search(r'\d{10,}', message_body)
+        if phone_match:
+            user_info["telefono"] = phone_match.group(0)
+            user_data_storage[phone_number] = user_info
+            user_data["stage"] = "esperando_fecha_nacimiento_sub"
+            send_whatsapp_message(phone_number, {
+                "type": "text",
+                "text": {"body": "Gracias. Ahora, por favor, envía tu fecha de nacimiento (ej: AAAA-MM-DD)."}
+            })
+        else:
+            send_whatsapp_message(phone_number, {
+                "type": "text",
+                "text": {"body": "El formato del teléfono es incorrecto. Por favor, inténtalo de nuevo."}
+            })
+    
+    elif user_data["stage"] == "esperando_fecha_nacimiento_sub":
+        try:
+            datetime.strptime(message_body, "%Y-%m-%d")
+            user_info["fecha_nacimiento"] = message_body.strip()
+            user_data_storage[phone_number] = user_info
+            user_data["stage"] = "esperando_edad_sub"
+            send_whatsapp_message(phone_number, {
+                "type": "text",
+                "text": {"body": "Gracias. Ahora, por favor, envía tu edad."}
+            })
+        except ValueError:
+            send_whatsapp_message(phone_number, {
+                "type": "text",
+                "text": {"body": "El formato de la fecha es incorrecto. Por favor, usa AAAA-MM-DD."}
+            })
+
+    elif user_data["stage"] == "esperando_edad_sub":
+        if message_body.isdigit():
+            user_info["edad"] = message_body.strip()
+            user_data_storage[phone_number] = user_info
+            user_data["stage"] = "esperando_correo_sub"
+            send_whatsapp_message(phone_number, {
+                "type": "text",
+                "text": {"body": "Gracias. Ahora, por favor, envía tu correo electrónico para enviarte la confirmación."}
+            })
+        else:
+            send_whatsapp_message(phone_number, {
+                "type": "text",
+                "text": {"body": "Por favor, ingresa una edad válida (solo números)."}
+            })
+
+    elif user_data["stage"] == "esperando_correo_sub":
+        email_match = re.search(r'[\w\.-]+@[\w\.-]+\.\w+', message_body)
+        if email_match:
+            user_info["correo"] = email_match.group(0)
+            user_data_storage[phone_number] = user_info
+            user_data["stage"] = "mostrar_horarios_sub"
+            send_whatsapp_message(phone_number, HORARIOS_SUBSECUENTE)
+            send_whatsapp_message(phone_number, {
+                "type": "text",
+                "text": {"body": "Por favor, responde con la fecha y hora que prefieras (ej: 2025-04-05 10:00)"}
+            })
+            user_data["stage"] = "esperando_fecha_sub"
+        else:
+            send_whatsapp_message(phone_number, {
+                "type": "text",
+                "text": {"body": "El formato del correo es incorrecto. Por favor, inténtalo de nuevo."}
+            })
 
     # === AGENDAR CITA (PRIMERA VEZ) ===
     elif user_data["stage"] == "esperando_fecha":
@@ -437,24 +542,32 @@ def process_user_message(phone_number, message_body):
             servicio_nombre = SERVICIOS_NOMBRES.get(servicio_key, "Consulta")
             especialista_key = user_data.get("especialista", "1")
             especialista_nombre = ESPECIALISTAS_NOMBRES.get(especialista_key, "No definido")
-            nombre_paciente = user_info.get('nombre', 'Paciente Anónimo')
             
-            # NUEVA LÓGICA: Enviar correo electrónico
+            # Datos del paciente
+            nombre_paciente = user_info.get('nombre', 'Paciente Anónimo')
+            telefono_paciente = user_info.get('telefono', 'No proporcionado')
+            dob_paciente = user_info.get('fecha_nacimiento', 'No proporcionado')
+            edad_paciente = user_info.get('edad', 'No proporcionada')
+            
+            # Enviar correo electrónico
             if user_info.get('correo'):
                 send_appointment_email(
                     user_info['correo'],
                     nombre_paciente,
+                    telefono_paciente,
+                    dob_paciente,
+                    edad_paciente,
                     especialista_nombre,
                     fecha_hora.strftime("%Y-%m-%d"),
                     fecha_hora.strftime("%H:%M"),
-                    servicio_nombre # Se pasa el nombre del servicio
+                    servicio_nombre
                 )
             
             send_whatsapp_message(phone_number, CONFIRMACION)
             cita_detalle = {
                 "type": "text",
                 "text": {
-                    "body": f"📅 CONFIRMACIÓN DE CITA\n\nServicio: {servicio_nombre}\nEspecialista: {especialista_nombre}\nFecha y hora: {fecha_hora_str}\nDuración estimada: {duracion} minutos"
+                    "body": f"📅 CONFIRMACIÓN DE CITA\n\nServicio: {servicio_nombre}\nEspecialista: {especialista_nombre}\nFecha y hora: {fecha_hora_str}\nDuración estimada: {duracion} minutos\n\nNombre: {nombre_paciente}\nTeléfono: {telefono_paciente}\nFecha de Nacimiento: {dob_paciente}\nEdad: {edad_paciente}"
                 }
             }
             send_whatsapp_message(phone_number, cita_detalle)
@@ -474,25 +587,33 @@ def process_user_message(phone_number, message_body):
             servicio_key = user_data.get("servicio", "1")
             duracion = DURACIONES_SUBSECUENTE.get(servicio_key, 45)
             servicio_nombre = SERVICIOS_SUB_NOMBRES.get(servicio_key, "Consulta")
-            nombre_paciente = user_info.get('nombre', 'Paciente Anónimo')
             especialista_nombre = "Por definir"
 
-            # NUEVA LÓGICA: Enviar correo electrónico
+            # Datos del paciente
+            nombre_paciente = user_info.get('nombre', 'Paciente Anónimo')
+            telefono_paciente = user_info.get('telefono', 'No proporcionado')
+            dob_paciente = user_info.get('fecha_nacimiento', 'No proporcionado')
+            edad_paciente = user_info.get('edad', 'No proporcionada')
+
+            # Enviar correo electrónico
             if user_info.get('correo'):
                 send_appointment_email(
                     user_info['correo'],
                     nombre_paciente,
+                    telefono_paciente,
+                    dob_paciente,
+                    edad_paciente,
                     especialista_nombre,
                     fecha_hora.strftime("%Y-%m-%d"),
                     fecha_hora.strftime("%H:%M"),
-                    servicio_nombre # Se pasa el nombre del servicio
+                    servicio_nombre
                 )
 
             send_whatsapp_message(phone_number, CONFIRMACION)
             cita_detalle = {
                 "type": "text",
                 "text": {
-                    "body": f"📅 CONFIRMACIÓN DE CITA\n\nServicio: {servicio_nombre}\nFecha y hora: {fecha_hora_str}\nDuración estimada: {duracion} minutos"
+                    "body": f"📅 CONFIRMACIÓN DE CITA\n\nServicio: {servicio_nombre}\nFecha y hora: {fecha_hora_str}\nDuración estimada: {duracion} minutos\n\nNombre: {nombre_paciente}\nTeléfono: {telefono_paciente}\nFecha de Nacimiento: {dob_paciente}\nEdad: {edad_paciente}"
                 }
             }
             send_whatsapp_message(phone_number, cita_detalle)
