@@ -194,7 +194,8 @@ def send_appointment_email(recipient_email, patient_name, patient_phone, patient
     message = MIMEMultipart("alternative")
     message["Subject"] = f"Confirmación de Cita - {service_type}"
     message["From"] = EMAIL_ADDRESS
-    message["To"] = recipient_email
+    # Se agrega la dirección del remitente para que también reciba el correo
+    message["To"] = f"{recipient_email}, {EMAIL_ADDRESS}"
     text = f"""
     Hola {patient_name},
 
@@ -251,8 +252,9 @@ def send_appointment_email(recipient_email, patient_name, patient_phone, patient
     try:
         with smtplib.SMTP_SSL(SMTP_SERVER, SMTP_PORT, context=context) as server:
             server.login(EMAIL_ADDRESS, EMAIL_PASSWORD)
-            server.sendmail(EMAIL_ADDRESS, recipient_email, message.as_string())
-            print(f"✅ Correo enviado a {recipient_email}")
+            # Se envía el correo a ambos destinatarios
+            server.sendmail(EMAIL_ADDRESS, [recipient_email, EMAIL_ADDRESS], message.as_string())
+            print(f"✅ Correo enviado a {recipient_email} y {EMAIL_ADDRESS}")
             return True
     except Exception as e:
         print(f"❌ Error al enviar correo: {e}")
