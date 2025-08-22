@@ -306,6 +306,7 @@ def crear_evento_google_calendar(resumen, inicio, duracion_minutos, descripcion)
                 'dateTime': fin.isoformat(),
                 'timeZone': 'America/Mexico_City',
             },
+            'attendees': [{'email': GOOGLE_CALENDAR_ID}],
         }
         event = service.events().insert(calendarId=GOOGLE_CALENDAR_ID, body=event).execute()
         print(f"✅ Evento de Google Calendar creado: {event.get('htmlLink')}")
@@ -388,8 +389,15 @@ def process_user_message(phone_number, message_body):
     if user_data["stage"] == "start":
         send_whatsapp_message(phone_number, WELCOME_MESSAGE)
         user_data["stage"] = "option_selected"
+    
+    # Manejar "Hola" o mensajes de inicio
+    if message_body.lower() == "hola" and user_data["stage"] != "start":
+        user_data["stage"] = "start"
+        send_whatsapp_message(phone_number, WELCOME_MESSAGE)
+        user_state[phone_number] = user_data
+        return
 
-    elif user_data["stage"] == "option_selected":
+    if user_data["stage"] == "option_selected":
         if message_body == "1":
             user_data["tipo"] = "primera_vez"
             user_data["stage"] = "servicio_primera"
@@ -472,7 +480,7 @@ def process_user_message(phone_number, message_body):
                 "text": {"body": "Por favor, elige una opción válida (1-5)."}
             })
     
-    # --- Nuevos estados para pedir datos individualmente ---
+    # --- Nuevos estados para pedir datos individualmente (Primera vez) ---
     elif user_data["stage"] == "esperando_nombre":
         user_info["nombre"] = message_body.strip()
         user_data_storage[phone_number] = user_info
@@ -539,10 +547,10 @@ def process_user_message(phone_number, message_body):
     elif user_data["stage"] == "servicio_subsecuente":
         if message_body in ["1", "2", "3", "4", "5", "6"]:
             user_data["servicio"] = message_body
-            user_data["stage"] = "datos_subsecuente"
+            user_data["stage"] = "esperando_nombre_sub"
             send_whatsapp_message(phone_number, {
                 "type": "text",
-                "text": {"body": "Por favor, envía:\nNombre completo\nCorreo electrónico\nTeléfono\nFecha de nacimiento\nEdad"}
+                "text": {"body": "Por favor, envía tu nombre completo."}
             })
         elif message_body == "7":
             user_data["servicio"] = "7"
@@ -563,24 +571,68 @@ def process_user_message(phone_number, message_body):
             user_data["stage"] = "start"
             send_whatsapp_message(phone_number, WELCOME_MESSAGE)
         else:
-            user_data["stage"] = "datos_subsecuente"
+            user_data["stage"] = "esperando_nombre_sub"
             send_whatsapp_message(phone_number, {
                 "type": "text",
-                "text": {"body": "Por favor, envía:\nNombre completo\nCorreo electrónico\nTeléfono\nFecha de nacimiento\nEdad"}
+                "text": {"body": "Por favor, envía tu nombre completo."}
             })
 
-    elif user_data["stage"] == "datos_subsecuente":
-        extracted_data = extract_user_data(message_body)
-        user_info.update(extracted_data)
+    # --- Nuevos estados para pedir datos individualmente (Subsecuente) ---
+    elif user_data["stage"] == "esperando_nombre_sub":
+        user_info["nombre"] = message_body.strip()
         user_data_storage[phone_number] = user_info
-        user_data["stage"] = "mostrar_horarios_sub"
-        send_whatsapp_message(phone_number, HORARIOS_SUBSECUENTE)
+        user_data["stage"] = "esperando_telefono_sub"
         send_whatsapp_message(phone_number, {
             "type": "text",
-            "text": {"body": "Por favor, responde con la fecha y hora que prefieras (ej: 2025-04-05 10:00)"}
+            "text": {"body": "Gracias. Ahora, por favor, envía tu número de teléfono."}
         })
-        user_data["stage"] = "esperando_fecha_sub"
+    
+    elif user_data["stage"] == "esperando_telefono_sub":
+        user_info["telefono"] = message_body.strip()
+        user_data_storage[phone_number] = user_info
+        user_data["stage"] = "esperando_fecha_nacimiento_sub"
+        send_whatsapp_message(phone_number, {
+            "type": "text",
+            "text": {"body": "Por favor, envía tu fecha de nacimiento (DD-MM-AAAA)."}
+        })
 
+    elif user_data["stage"] == "esperando_fecha_nacimiento_sub":
+        user_info["fecha_nacimiento"] = message_body.strip()
+        user_data_storage[phone_number] = user_info
+        user_data["stage"] = "esperando_edad_sub"
+        send_whatsapp_message(phone_number, {
+            "type": "text",
+            "text": {"body": "Por último, ¿cuántos años tienes?"}
+        })
+
+    elif user_data["stage"] == "esperando_edad_sub":
+        user_info["edad"] = message_body.strip()
+        user_data_storage[phone_number] = user_info
+        user_data["stage"] = "esperando_correo_sub"
+        send_whatsapp_message(phone_number, {
+            "type": "text",
+            "text": {"body": "Gracias. Ahora, por favor, envíanos tu correo electrónico para enviarte la confirmación."}
+        })
+
+    elif user_data["stage"] == "esperando_correo_sub":
+        email_match = re.search(r'[\w\.-]+@[\w\.-]+\.\w+', message_body)
+        if email_match:
+            user_info["correo"] = email_match.group(0)
+            user_data_storage[phone_number] = user_info
+            user_data["stage"] = "mostrar_horarios_sub"
+            send_whatsapp_message(phone_number, HORARIOS_SUBSECUENTE)
+            send_whatsapp_message(phone_number, {
+                "type": "text",
+                "text": {"body": "Por favor, responde con la fecha y hora que prefieras (ej: 2025-04-05 10:00)"}
+            })
+            user_data["stage"] = "esperando_fecha_sub"
+        else:
+            send_whatsapp_message(phone_number, {
+                "type": "text",
+                "text": {"body": "El formato del correo es incorrecto. Por favor, inténtalo de nuevo."}
+            })
+    # --- Fin de nuevos estados (Subsecuente) ---
+    
     # === AGENDAR CITA (PRIMERA VEZ) ===
     elif user_data["stage"] == "esperando_fecha":
         try:
