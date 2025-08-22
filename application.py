@@ -461,26 +461,54 @@ def process_user_message(phone_number, message_body):
     elif user_data["stage"] == "especialista":
         if message_body in ["1", "2", "3", "4", "5"]:
             user_data["especialista"] = message_body
-            user_data["stage"] = "pedir_datos_sin_correo"
+            user_data["stage"] = "esperando_nombre"  # <--- Nuevo estado
             send_whatsapp_message(phone_number, {
                 "type": "text",
-                "text": {"body": "Por favor, envía:\nNombre completo\nTeléfono\nFecha de nacimiento\nEdad"}
+                "text": {"body": "Por favor, envía tu nombre completo."} # <--- Nuevo mensaje
             })
         else:
             send_whatsapp_message(phone_number, {
                 "type": "text",
                 "text": {"body": "Por favor, elige una opción válida (1-5)."}
             })
-
-    elif user_data["stage"] == "pedir_datos_sin_correo":
-        extracted_data = extract_user_data(message_body)
-        user_info.update(extracted_data)
+    
+    # --- Nuevos estados para pedir datos individualmente ---
+    elif user_data["stage"] == "esperando_nombre":
+        user_info["nombre"] = message_body.strip()
         user_data_storage[phone_number] = user_info
-        user_data["stage"] = "esperando_correo"
+        user_data["stage"] = "esperando_telefono"
+        send_whatsapp_message(phone_number, {
+            "type": "text",
+            "text": {"body": "Gracias. Ahora, por favor, envía tu número de teléfono."}
+        })
+
+    elif user_data["stage"] == "esperando_telefono":
+        user_info["telefono"] = message_body.strip()
+        user_data_storage[phone_number] = user_info
+        user_data["stage"] = "esperando_fecha_nacimiento"
+        send_whatsapp_message(phone_number, {
+            "type": "text",
+            "text": {"body": "Por favor, envía tu fecha de nacimiento (DD-MM-AAAA)."}
+        })
+
+    elif user_data["stage"] == "esperando_fecha_nacimiento":
+        user_info["fecha_nacimiento"] = message_body.strip()
+        user_data_storage[phone_number] = user_info
+        user_data["stage"] = "esperando_edad"
+        send_whatsapp_message(phone_number, {
+            "type": "text",
+            "text": {"body": "Por último, ¿cuántos años tienes?"}
+        })
+    
+    elif user_data["stage"] == "esperando_edad":
+        user_info["edad"] = message_body.strip()
+        user_data_storage[phone_number] = user_info
+        user_data["stage"] = "esperando_correo" # <--- Regresamos al flujo original
         send_whatsapp_message(phone_number, {
             "type": "text",
             "text": {"body": "Gracias. Ahora, por favor, envíanos tu correo electrónico para enviarte la confirmación."}
         })
+    # --- Fin de nuevos estados ---
 
     elif user_data["stage"] == "esperando_correo":
         email_match = re.search(r'[\w\.-]+@[\w\.-]+\.\w+', message_body)
