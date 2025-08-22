@@ -15,7 +15,7 @@ from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
 # Importaciones para iCalendar (.ics)
-from ics import Calendar, Event as IcsEvent
+from icalendar import Calendar, Event as IcsEvent
 import tempfile
 import os
 
