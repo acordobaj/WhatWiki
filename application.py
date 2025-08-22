@@ -306,7 +306,6 @@ def crear_evento_google_calendar(resumen, inicio, duracion_minutos, descripcion)
                 'dateTime': fin.isoformat(),
                 'timeZone': 'America/Mexico_City',
             },
-            # Se ha eliminado la línea de 'attendees' para evitar el error de permisos.
         }
         event = service.events().insert(calendarId=GOOGLE_CALENDAR_ID, body=event).execute()
         print(f"✅ Evento de Google Calendar creado: {event.get('htmlLink')}")
@@ -317,7 +316,7 @@ def crear_evento_google_calendar(resumen, inicio, duracion_minutos, descripcion)
     except Exception as e:
         print(f"❌ Error desconocido: {e}")
         return None
-    
+
 # === ENVÍO DE CORREO ===
 def send_appointment_email(recipient_email, patient_name, doctor_name, appointment_date, appointment_time):
     if not all([EMAIL_ADDRESS, EMAIL_PASSWORD, recipient_email]):
@@ -416,8 +415,9 @@ def process_user_message(phone_number, message_body):
                 "type": "text",
                 "text": {"body": "Para el envío de resultados, envíalos al correo:\n📧 gine.moni.og@gmail.com"}
             })
+            # Reinicia la conversación después de dar la información
+            user_data["stage"] = "start"
             send_whatsapp_message(phone_number, WELCOME_MESSAGE)
-            user_data["stage"] = "option_selected"
         elif message_body == "6":
             send_whatsapp_message(phone_number, {
                 "type": "text",
@@ -461,10 +461,10 @@ def process_user_message(phone_number, message_body):
     elif user_data["stage"] == "especialista":
         if message_body in ["1", "2", "3", "4", "5"]:
             user_data["especialista"] = message_body
-            user_data["stage"] = "esperando_nombre"  # <--- Nuevo estado
+            user_data["stage"] = "esperando_nombre"
             send_whatsapp_message(phone_number, {
                 "type": "text",
-                "text": {"body": "Por favor, envía tu nombre completo."} # <--- Nuevo mensaje
+                "text": {"body": "Por favor, envía tu nombre completo."}
             })
         else:
             send_whatsapp_message(phone_number, {
@@ -503,7 +503,7 @@ def process_user_message(phone_number, message_body):
     elif user_data["stage"] == "esperando_edad":
         user_info["edad"] = message_body.strip()
         user_data_storage[phone_number] = user_info
-        user_data["stage"] = "esperando_correo" # <--- Regresamos al flujo original
+        user_data["stage"] = "esperando_correo"
         send_whatsapp_message(phone_number, {
             "type": "text",
             "text": {"body": "Gracias. Ahora, por favor, envíanos tu correo electrónico para enviarte la confirmación."}
@@ -630,8 +630,11 @@ def process_user_message(phone_number, message_body):
                 }
             }
             send_whatsapp_message(phone_number, cita_detalle)
+            
+            # Limpiar el estado de conversación al finalizar el proceso
             del user_state[phone_number]
             del user_data_storage[phone_number]
+
         except ValueError:
             send_whatsapp_message(phone_number, {
                 "type": "text",
@@ -686,8 +689,11 @@ def process_user_message(phone_number, message_body):
                 }
             }
             send_whatsapp_message(phone_number, cita_detalle)
+            
+            # Limpiar el estado de conversación al finalizar el proceso
             del user_state[phone_number]
             del user_data_storage[phone_number]
+
         except ValueError:
             send_whatsapp_message(phone_number, {
                 "type": "text",
@@ -703,8 +709,8 @@ def process_user_message(phone_number, message_body):
                 "type": "text",
                 "text": {"body": "Conectando con América... Un miembro del equipo te contactará pronto."}
             })
+        user_data["stage"] = "start"
         send_whatsapp_message(phone_number, WELCOME_MESSAGE)
-        user_data["stage"] = "option_selected"
 
     # === FACTURACIÓN ===
     elif user_data["stage"] == "facturacion":
@@ -718,8 +724,8 @@ def process_user_message(phone_number, message_body):
                 "type": "text",
                 "text": {"body": "Para dudas de facturación, escribe a:\n📧 lcastillo@gbcasesoria.mx"}
             })
+        user_data["stage"] = "start"
         send_whatsapp_message(phone_number, WELCOME_MESSAGE)
-        user_data["stage"] = "option_selected"
 
     # === DUDAS ===
     elif user_data["stage"] == "dudas":
@@ -728,12 +734,12 @@ def process_user_message(phone_number, message_body):
             "type": "text",
             "text": {"body": "Hemos recibido tu consulta. Un miembro del equipo te responderá pronto."}
         })
+        user_data["stage"] = "start"
         send_whatsapp_message(phone_number, WELCOME_MESSAGE)
-        user_data["stage"] = "option_selected"
 
     else:
+        user_data["stage"] = "start"
         send_whatsapp_message(phone_number, WELCOME_MESSAGE)
-        user_data["stage"] = "option_selected"
 
     user_state[phone_number] = user_data
 
