@@ -306,7 +306,7 @@ def crear_evento_google_calendar(resumen, inicio, duracion_minutos, descripcion)
                 'dateTime': fin.isoformat(),
                 'timeZone': 'America/Mexico_City',
             },
-            'attendees': [{'email': GOOGLE_CALENDAR_ID}],
+            # Se ha eliminado la línea de 'attendees' para evitar el error de permisos.
         }
         event = service.events().insert(calendarId=GOOGLE_CALENDAR_ID, body=event).execute()
         print(f"✅ Evento de Google Calendar creado: {event.get('htmlLink')}")
@@ -317,7 +317,7 @@ def crear_evento_google_calendar(resumen, inicio, duracion_minutos, descripcion)
     except Exception as e:
         print(f"❌ Error desconocido: {e}")
         return None
-
+    
 # === ENVÍO DE CORREO ===
 def send_appointment_email(recipient_email, patient_name, doctor_name, appointment_date, appointment_time):
     if not all([EMAIL_ADDRESS, EMAIL_PASSWORD, recipient_email]):
