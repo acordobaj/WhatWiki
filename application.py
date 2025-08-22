@@ -30,7 +30,7 @@ META_VERIFY_TOKEN = os.environ.get('META_VERIFY_TOKEN') or 'milkiin_verify_token
 # Variables para Google Calendar
 GOOGLE_CALENDAR_CREDENTIALS_JSON = os.environ.get('GOOGLE_CALENDAR_CREDENTIALS')
 GOOGLE_CALENDAR_ID = os.environ.get('GOOGLE_CALENDAR_ID')
-SCOPES = ['https://www.googleapis.com/auth/calendar.events']  # Sin espacios extra
+SCOPES = ['https://www.googleapis.com/auth/calendar.events']
 
 # === CONFIGURACIÓN DE CORREO ELECTRÓNICO ===
 EMAIL_ADDRESS = os.environ.get('EMAIL_ADDRESS')
@@ -117,13 +117,6 @@ CONFIRMACION = {
     "type": "text",
     "text": {
         "body": "✅ ¡Gracias por agendar tu cita con Milkiin!\n\n📍 Te esperamos en: Insurgentes Sur 1160, 6º piso, Colonia Del Valle. \n🗺️ [Ubicación en Google Maps](https://maps.app.goo.gl/VfWbVgwHLQrZPNrNA)\n\n💳 Aceptamos pagos con tarjeta (incluyendo AMEX) y en efectivo.\n\n⏰ En caso de cancelación, es necesario avisar con mínimo 72 horas de anticipación para poder realizar el reembolso del anticipo y reprogramar tu cita. Si no se cumple con este plazo, lamentablemente no podremos hacer el reembolso.\n\nAgradecemos tu comprensión y tu confianza. Estamos para acompañarte con profesionalismo y cariño en cada paso ❤️. Si tienes alguna duda o necesitas apoyo adicional, no dudes en escribirnos."
-    }
-}
-
-FINAL_MESSAGE = {
-    "type": "text",
-    "text": {
-        "body": "Conversación finalizada. Para iniciar un nuevo proceso, por favor, envía un mensaje. ¡Estamos para ayudarte! 😊"
     }
 }
 
@@ -313,6 +306,7 @@ def crear_evento_google_calendar(resumen, inicio, duracion_minutos, descripcion)
                 'dateTime': fin.isoformat(),
                 'timeZone': 'America/Mexico_City',
             },
+            'attendees': [{'email': GOOGLE_CALENDAR_ID}],
         }
         event = service.events().insert(calendarId=GOOGLE_CALENDAR_ID, body=event).execute()
         print(f"✅ Evento de Google Calendar creado: {event.get('htmlLink')}")
@@ -608,12 +602,8 @@ def process_user_message(phone_number, message_body):
                 }
             }
             send_whatsapp_message(phone_number, cita_detalle)
-            
-            # Reiniciar la conversación
-            send_whatsapp_message(phone_number, FINAL_MESSAGE)
             del user_state[phone_number]
-            if phone_number in user_data_storage:
-                del user_data_storage[phone_number]
+            del user_data_storage[phone_number]
         except ValueError:
             send_whatsapp_message(phone_number, {
                 "type": "text",
@@ -668,12 +658,8 @@ def process_user_message(phone_number, message_body):
                 }
             }
             send_whatsapp_message(phone_number, cita_detalle)
-            
-            # Reiniciar la conversación
-            send_whatsapp_message(phone_number, FINAL_MESSAGE)
             del user_state[phone_number]
-            if phone_number in user_data_storage:
-                del user_data_storage[phone_number]
+            del user_data_storage[phone_number]
         except ValueError:
             send_whatsapp_message(phone_number, {
                 "type": "text",
