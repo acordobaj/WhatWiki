@@ -271,11 +271,12 @@ def send_whatsapp_document(phone_number, file_path, caption="📅 Tu cita ha sid
         headers = {'Authorization': f'Bearer {META_ACCESS_TOKEN}'}
         with open(file_path, 'rb') as f:
             files = {
-                'file': (os.path.basename(file_path), f, 'text/calendar'),
-                'type': 'document',
-                'messaging_product': 'whatsapp'
+                'file': (os.path.basename(file_path), f, 'text/calendar')
             }
-            data = {'messaging_product': 'whatsapp', 'type': 'document'}
+            data = {
+                'messaging_product': 'whatsapp',
+                'type': 'document'
+            }
             response_upload = requests.post(media_upload_url, headers=headers, files=files, data=data)
         if response_upload.status_code != 200:
             print(f"❌ Error al subir archivo .ics: {response_upload.text}")
