@@ -294,51 +294,52 @@ def crear_evento_google_calendar(resumen, inicio, duracion_minutos, descripcion)
 
 # === ENVÍO DE CORREO ===
 def send_appointment_email(recipient_email, clinic_email, patient_name, patient_phone, patient_dob, patient_age, doctor_name, appointment_date, appointment_time):
-    if not all([EMAIL_ADDRESS, EMAIL_PASSWORD, recipient_email]):
-        print("❌ Error: Faltan credenciales de correo o correo del destinatario.")
+    if not all([EMAIL_ADDRESS, EMAIL_PASSWORD]):
+        print("❌ Error: Faltan credenciales de correo.")
         return False
     
     # Correo para el paciente
-    message_patient = MIMEMultipart("alternative")
-    message_patient["Subject"] = "Confirmación de Cita - Milkiin"
-    message_patient["From"] = EMAIL_ADDRESS
-    message_patient["To"] = recipient_email
-    text_patient = f"""
-    Hola {patient_name},
-    Tu cita con la Dra. {doctor_name} ha sido agendada con éxito.
-    Detalles de la cita:
-    Fecha: {appointment_date}
-    Hora: {appointment_time}
-    Te esperamos en nuestras instalaciones.
-    Saludos cordiales,
-    El equipo de Milkiin
-    """
-    html_patient = f"""
-    <html>
-      <body>
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
-          <h2 style="color: #4CAF50;">✅ Cita Confirmada</h2>
-          <p>Hola <strong>{patient_name}</strong>,</p>
-          <p>Tu cita con la <strong>Dra. {doctor_name}</strong> ha sido agendada con éxito.</p>
-          <p>Aquí están los detalles de tu cita:</p>
-          <ul>
-            <li><strong>Fecha:</strong> {appointment_date}</li>
-            <li><strong>Hora:</strong> {appointment_time}</li>
-          </ul>
-          <p>¡Esperamos verte pronto!</p>
-          <p>Si necesitas reagendar o tienes alguna pregunta, por favor contáctanos.</p>
-          <p style="margin-top: 30px;">
-            Saludos cordiales,<br>
-            El equipo de Milkiin
-          </p>
-          <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
-          <p style="font-size: 12px; color: #999;">Este es un mensaje automático, por favor no lo respondas directamente si no es para dudas sobre tu cita.</p>
-        </div>
-      </body>
-    </html>
-    """
-    message_patient.attach(MIMEText(text_patient, "plain"))
-    message_patient.attach(MIMEText(html_patient, "html"))
+    if recipient_email:
+        message_patient = MIMEMultipart("alternative")
+        message_patient["Subject"] = "Confirmación de Cita - Milkiin"
+        message_patient["From"] = EMAIL_ADDRESS
+        message_patient["To"] = recipient_email
+        text_patient = f"""
+        Hola {patient_name},
+        Tu cita con la Dra. {doctor_name} ha sido agendada con éxito.
+        Detalles de la cita:
+        Fecha: {appointment_date}
+        Hora: {appointment_time}
+        Te esperamos en nuestras instalaciones.
+        Saludos cordiales,
+        El equipo de Milkiin
+        """
+        html_patient = f"""
+        <html>
+          <body>
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
+              <h2 style="color: #4CAF50;">✅ Cita Confirmada</h2>
+              <p>Hola <strong>{patient_name}</strong>,</p>
+              <p>Tu cita con la <strong>Dra. {doctor_name}</strong> ha sido agendada con éxito.</p>
+              <p>Aquí están los detalles de tu cita:</p>
+              <ul>
+                <li><strong>Fecha:</strong> {appointment_date}</li>
+                <li><strong>Hora:</strong> {appointment_time}</li>
+              </ul>
+              <p>¡Esperamos verte pronto!</p>
+              <p>Si necesitas reagendar o tienes alguna pregunta, por favor contáctanos.</p>
+              <p style="margin-top: 30px;">
+                Saludos cordiales,<br>
+                El equipo de Milkiin
+              </p>
+              <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
+              <p style="font-size: 12px; color: #999;">Este es un mensaje automático, por favor no lo respondas directamente si no es para dudas sobre tu cita.</p>
+            </div>
+          </body>
+        </html>
+        """
+        message_patient.attach(MIMEText(text_patient, "plain"))
+        message_patient.attach(MIMEText(html_patient, "html"))
     
     # Correo para la clínica
     message_clinic = MIMEMultipart("alternative")
@@ -365,8 +366,9 @@ def send_appointment_email(recipient_email, clinic_email, patient_name, patient_
     try:
         with smtplib.SMTP_SSL(SMTP_SERVER, SMTP_PORT, context=context) as server:
             server.login(EMAIL_ADDRESS, EMAIL_PASSWORD)
-            server.sendmail(EMAIL_ADDRESS, recipient_email, message_patient.as_string())
-            print(f"✅ Correo de confirmación enviado a {recipient_email}")
+            if recipient_email:
+                server.sendmail(EMAIL_ADDRESS, recipient_email, message_patient.as_string())
+                print(f"✅ Correo de confirmación enviado a {recipient_email}")
             server.sendmail(EMAIL_ADDRESS, clinic_email, message_clinic.as_string())
             print(f"✅ Correo de notificación enviado a la clínica a {clinic_email}")
             return True
@@ -662,7 +664,7 @@ def process_user_message(phone_number, message_body):
 
             send_appointment_email(
                 user_info.get('correo'),
-                "milkiin.gine@gmail.com",
+                EMAIL_ADDRESS,
                 nombre_paciente,
                 user_info.get('telefono'),
                 user_info.get('fecha_nacimiento'),
@@ -729,7 +731,7 @@ def process_user_message(phone_number, message_body):
 
             send_appointment_email(
                 user_info.get('correo'),
-                "milkiin.gine@gmail.com",
+                EMAIL_ADDRESS,
                 nombre_paciente,
                 user_info.get('telefono'),
                 user_info.get('fecha_nacimiento'),
