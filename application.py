@@ -67,7 +67,7 @@ WELCOME_MESSAGE = {
 SERVICIOS_PRIMERA_VEZ = {
     "type": "text",
     "text": {
-        "body": "Selecciona el servicio de primera vez:\n1️⃣ Fertilidad\n2️⃣ Síndrome de Ovario Poliquístico\n3️⃣ Chequeo Anual\n4️⃣ Embarazo\n5️⃣ Otros"
+        "body": "Selecciona el servicio de primera vez:\n1️⃣ Fertilidad\n2️⃣ Síndrome de Ovario Poliquístico\n3️⃣ Chequeo Anual\n4️⃣ Embarazo\n5️⃣ Ginecología Pediátrica y Adolescentes\n6️⃣ Revisión de Estudios\n7️⃣ Otros"
     }
 }
 
@@ -85,13 +85,6 @@ OTROS_OPCIONES = {
     }
 }
 
-ESPECIALISTAS = {
-    "type": "text",
-    "text": {
-        "body": "Selecciona tu especialista:\n1️⃣ Dra. Mónica Olavarría\n2️⃣ Dra. Graciela Guadarrama\n3️⃣ Dra. Cinthia Ruiz\n4️⃣ Dra. Gisela Cuevas\n5️⃣ Dra. Gabriela Sánchez"
-    }
-}
-
 HORARIOS_PRIMERA_VEZ = {
     "type": "text",
     "text": {
@@ -106,21 +99,7 @@ HORARIOS_SUBSECUENTE = {
     }
 }
 
-COSTOS = {
-    "type": "text",
-    "text": {
-        "body": "💰 Nuestros costos:\n\n• PAQUETE CHECK UP: $1,800 pesos (incluye papanicolaou, USG , revisión de mamas, colposcopia y consulta)\n• CONSULTA DE FERTILIDAD: $1,500 pesos. (incluye ultrasonido)\n• CONSULTA PRENATAL: $1,500 pesos. (incluye ultrasonido)\n• ESPERMABIOTOSCOPIA: $1,500 pesos\n• ESPERMABIOTOSCOPIA CON FRAGMENTACIÓN: $4,500 pesos"
-    }
-}
-
-CONFIRMACION = {
-    "type": "text",
-    "text": {
-        "body": "✅ ¡Gracias por agendar tu cita con Milkiin!\n\n📍 Te esperamos en: Insurgentes Sur 1160, 6º piso, Colonia Del Valle. \n🗺️ [Ubicación en Google Maps](https://maps.app.goo.gl/VfWbVgwHLQrZPNrNA)\n\n💳 Aceptamos pagos con tarjeta (incluyendo AMEX) y en efectivo.\n\n⏰ En caso de cancelación, es necesario avisar con mínimo 72 horas de anticipación para poder realizar el reembolso del anticipo y reprogramar tu cita. Si no se cumple con este plazo, lamentablemente no podremos hacer el reembolso.\n\nAgradecemos tu comprensión y tu confianza. Estamos para acompañarte con profesionalismo y cariño en cada paso ❤️. Si tienes alguna duda o necesitas apoyo adicional, no dudes en escribirnos."
-    }
-}
-
-# MAPEOS
+# === MAPEOS Y LÓGICA DE ESPECIALISTAS ===
 ESPECIALISTAS_NOMBRES = {
     "1": "Dra. Mónica Olavarría",
     "2": "Dra. Graciela Guadarrama",
@@ -129,12 +108,35 @@ ESPECIALISTAS_NOMBRES = {
     "5": "Dra. Gabriela Sánchez"
 }
 
+ESPECIALISTAS_POR_SERVICIO = {
+    "1": ["1", "4"],  # Fertilidad: Mónica, Gisela
+    "2": ["1", "3", "4"],  # SOP: Mónica, Cinthia, Gisela
+    "3": ["1", "2", "3", "4", "5"],  # Chequeo Anual: Todas
+    "4": ["1", "2", "3", "4", "5"],  # Embarazo: Todas
+    "5": ["3"],  # Ginecología Pediátrica: Cinthia
+    "6": ["1", "2", "3", "4", "5"],  # Revisión de Estudios: Todas
+}
+
+def get_specialist_menu(service_key):
+    especialistas_disponibles = ESPECIALISTAS_POR_SERVICIO.get(service_key, [])
+    if not especialistas_disponibles:
+        return None
+    menu_text = "Selecciona tu especialista:\n"
+    for key in especialistas_disponibles:
+        menu_text += f"▪️ {key}: {ESPECIALISTAS_NOMBRES[key]}\n"
+    return {
+        "type": "text",
+        "text": {"body": menu_text}
+    }
+
 SERVICIOS_NOMBRES = {
     "1": "Fertilidad",
     "2": "Síndrome de Ovario Poliquístico",
     "3": "Chequeo Anual",
     "4": "Embarazo",
-    "5": "Otros"
+    "5": "Ginecología Pediátrica y Adolescentes",
+    "6": "Revisión de Estudios",
+    "7": "Otros"
 }
 
 SERVICIOS_SUB_NOMBRES = {
@@ -152,7 +154,9 @@ DURACIONES_PRIMERA_VEZ = {
     "2": 60,
     "3": 60,
     "4": 60,
-    "5": 30
+    "5": 60,
+    "6": 30,
+    "7": 30
 }
 
 DURACIONES_SUBSECUENTE = {
@@ -163,6 +167,20 @@ DURACIONES_SUBSECUENTE = {
     "5": 30,
     "6": 30,
     "7": 30
+}
+
+COSTOS = {
+    "type": "text",
+    "text": {
+        "body": "💰 Nuestros costos:\n\n• PAQUETE CHECK UP: $1,800 pesos (incluye papanicolaou, USG , revisión de mamas, colposcopia y consulta)\n• CONSULTA DE FERTILIDAD: $1,500 pesos. (incluye ultrasonido)\n• CONSULTA PRENATAL: $1,500 pesos. (incluye ultrasonido)\n• ESPERMABIOTOSCOPIA: $1,500 pesos\n• ESPERMABIOTOSCOPIA CON FRAGMENTACIÓN: $4,500 pesos"
+    }
+}
+
+CONFIRMACION = {
+    "type": "text",
+    "text": {
+        "body": "✅ ¡Gracias por agendar tu cita con Milkiin!\n\n📍 Te esperamos en: Insurgentes Sur 1160, 6º piso, Colonia Del Valle. \n🗺️ [Ubicación en Google Maps](https://maps.app.goo.gl/VfWbVgwHLQrZPNrNA)\n\n💳 Aceptamos pagos con tarjeta (incluyendo AMEX) y en efectivo.\n\n⏰ En caso de cancelación, es necesario avisar con mínimo 72 horas de anticipación para poder realizar el reembolso del anticipo y reprogramar tu cita. Si no se cumple con este plazo, lamentablemente no podremos hacer el reembolso.\n\nAgradecemos tu comprensión y tu confianza. Estamos para acompañarte con profesionalismo y cariño en cada paso ❤️. Si tienes alguna duda o necesitas apoyo adicional, no dudes en escribirnos."
+    }
 }
 
 # === FUNCIONES PARA WHATSAPP META API ===
@@ -220,11 +238,11 @@ def extract_user_data(message_body):
 def generar_archivo_ics(nombre_paciente, servicio, especialista, fecha_hora, duracion_minutos):
     cal = Calendar()
     event = IcsEvent()
-    event.name = f"Cita en Milkiin - {servicio}"
-    event.begin = fecha_hora
-    event.end = fecha_hora + timedelta(minutes=duracion_minutos)
-    event.location = "Insurgentes Sur 1160, 6º piso, Colonia Del Valle, Ciudad de México"
-    event.description = f"""
+    event.add('summary', f"Cita en Milkiin - {servicio}")
+    event.add('dtstart', fecha_hora)
+    event.add('dtend', fecha_hora + timedelta(minutes=duracion_minutos))
+    event.add('location', "Insurgentes Sur 1160, 6º piso, Colonia Del Valle, Ciudad de México")
+    event.add('description', f"""
 Cita agendada con éxito en Milkiin ❤️
 
 Servicio: {servicio}
@@ -238,10 +256,10 @@ Paciente: {nombre_paciente}
 ⏰ Recordatorio: Si necesitas cancelar, avísanos con 72 horas de anticipación.
 
 ¡Te esperamos con cariño!
-    """.strip()
-    cal.events.add(event)
+    """.strip())
+    cal.add_component(event)
     temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".ics")
-    temp_file.write(cal.serialize().encode("utf-8"))
+    temp_file.write(cal.to_ical())
     temp_file.close()
     return temp_file.name
 
@@ -306,7 +324,6 @@ def crear_evento_google_calendar(resumen, inicio, duracion_minutos, descripcion)
                 'dateTime': fin.isoformat(),
                 'timeZone': 'America/Mexico_City',
             },
-            # Se ha eliminado la línea de 'attendees' para evitar el error de permisos.
         }
         event = service.events().insert(calendarId=GOOGLE_CALENDAR_ID, body=event).execute()
         print(f"✅ Evento de Google Calendar creado: {event.get('htmlLink')}")
@@ -317,7 +334,7 @@ def crear_evento_google_calendar(resumen, inicio, duracion_minutos, descripcion)
     except Exception as e:
         print(f"❌ Error desconocido: {e}")
         return None
-    
+
 # === ENVÍO DE CORREO ===
 def send_appointment_email(recipient_email, patient_name, doctor_name, appointment_date, appointment_time):
     if not all([EMAIL_ADDRESS, EMAIL_PASSWORD, recipient_email]):
@@ -386,6 +403,12 @@ def process_user_message(phone_number, message_body):
     user_info = user_data_storage.get(phone_number, {})
     print(f"[MENSAJE ENTRANTE] {phone_number}: {message_body}")
 
+    if message_body.lower() == "hola" and user_data["stage"] != "start":
+        user_data["stage"] = "start"
+        send_whatsapp_message(phone_number, WELCOME_MESSAGE)
+        user_state[phone_number] = user_data
+        return
+    
     if user_data["stage"] == "start":
         send_whatsapp_message(phone_number, WELCOME_MESSAGE)
         user_data["stage"] = "option_selected"
@@ -414,16 +437,18 @@ def process_user_message(phone_number, message_body):
         elif message_body == "5":
             send_whatsapp_message(phone_number, {
                 "type": "text",
-                "text": {"body": "Para el envío de resultados, envíalos al correo:\n📧 gine.moni.og@gmail.com"}
+                "text": {"body": "Para el envío de resultados, envíalos al correo:\n📧 nicontacto@heyginemoni.com"}
             })
+            # Reinicia la conversación después de dar la información
+            user_data["stage"] = "start"
             send_whatsapp_message(phone_number, WELCOME_MESSAGE)
-            user_data["stage"] = "option_selected"
         elif message_body == "6":
             send_whatsapp_message(phone_number, {
                 "type": "text",
-                "text": {"body": "¿Tienes alguna duda? Escríbenos brevemente tu consulta y en breve te conectaremos con un miembro del equipo."}
+                "text": {"body": "Para dudas o cancelaciones, puedes escribirnos a:\n📧 contacto@heyginemoni.com"}
             })
-            user_data["stage"] = "dudas"
+            user_data["stage"] = "start"
+            send_whatsapp_message(phone_number, WELCOME_MESSAGE)
         else:
             send_whatsapp_message(phone_number, {
                 "type": "text",
@@ -432,18 +457,27 @@ def process_user_message(phone_number, message_body):
 
     # === PRIMERA VEZ ===
     elif user_data["stage"] == "servicio_primera":
-        if message_body in ["1", "2", "3", "4"]:
+        if message_body in ["1", "2", "3", "4", "5", "6"]:
             user_data["servicio"] = message_body
             user_data["stage"] = "especialista"
-            send_whatsapp_message(phone_number, ESPECIALISTAS)
-        elif message_body == "5":
-            user_data["servicio"] = "5"
+            especialista_menu = get_specialist_menu(message_body)
+            if especialista_menu:
+                send_whatsapp_message(phone_number, especialista_menu)
+            else:
+                send_whatsapp_message(phone_number, {
+                    "type": "text",
+                    "text": {"body": "No hay especialistas disponibles para este servicio."}
+                })
+                user_data["stage"] = "start"
+                send_whatsapp_message(phone_number, WELCOME_MESSAGE)
+        elif message_body == "7":
+            user_data["servicio"] = "7"
             user_data["stage"] = "otros_opciones"
             send_whatsapp_message(phone_number, OTROS_OPCIONES)
         else:
             send_whatsapp_message(phone_number, {
                 "type": "text",
-                "text": {"body": "Por favor, elige una opción válida (1-5)."}
+                "text": {"body": "Por favor, elige una opción válida (1-7)."}
             })
 
     elif user_data["stage"] == "otros_opciones":
@@ -455,24 +489,29 @@ def process_user_message(phone_number, message_body):
             user_data["stage"] = "start"
             send_whatsapp_message(phone_number, WELCOME_MESSAGE)
         else:
-            user_data["stage"] = "especialista"
-            send_whatsapp_message(phone_number, ESPECIALISTAS)
-
-    elif user_data["stage"] == "especialista":
-        if message_body in ["1", "2", "3", "4", "5"]:
-            user_data["especialista"] = message_body
-            user_data["stage"] = "esperando_nombre"  # <--- Nuevo estado
+            user_data["servicio"] = message_body
+            user_data["stage"] = "esperando_nombre"
             send_whatsapp_message(phone_number, {
                 "type": "text",
-                "text": {"body": "Por favor, envía tu nombre completo."} # <--- Nuevo mensaje
+                "text": {"body": "Por favor, envía tu nombre completo."}
+            })
+
+    elif user_data["stage"] == "especialista":
+        valid_specialists = ESPECIALISTAS_POR_SERVICIO.get(user_data["servicio"], [])
+        if message_body in valid_specialists:
+            user_data["especialista"] = message_body
+            user_data["stage"] = "esperando_nombre"
+            send_whatsapp_message(phone_number, {
+                "type": "text",
+                "text": {"body": "Por favor, envía tu nombre completo."}
             })
         else:
             send_whatsapp_message(phone_number, {
                 "type": "text",
-                "text": {"body": "Por favor, elige una opción válida (1-5)."}
+                "text": {"body": "Por favor, elige una opción válida de la lista."}
             })
     
-    # --- Nuevos estados para pedir datos individualmente ---
+    # --- Nuevos estados para pedir datos individualmente (Primera vez) ---
     elif user_data["stage"] == "esperando_nombre":
         user_info["nombre"] = message_body.strip()
         user_data_storage[phone_number] = user_info
@@ -503,7 +542,7 @@ def process_user_message(phone_number, message_body):
     elif user_data["stage"] == "esperando_edad":
         user_info["edad"] = message_body.strip()
         user_data_storage[phone_number] = user_info
-        user_data["stage"] = "esperando_correo" # <--- Regresamos al flujo original
+        user_data["stage"] = "esperando_correo"
         send_whatsapp_message(phone_number, {
             "type": "text",
             "text": {"body": "Gracias. Ahora, por favor, envíanos tu correo electrónico para enviarte la confirmación."}
@@ -539,10 +578,10 @@ def process_user_message(phone_number, message_body):
     elif user_data["stage"] == "servicio_subsecuente":
         if message_body in ["1", "2", "3", "4", "5", "6"]:
             user_data["servicio"] = message_body
-            user_data["stage"] = "datos_subsecuente"
+            user_data["stage"] = "esperando_nombre_sub"
             send_whatsapp_message(phone_number, {
                 "type": "text",
-                "text": {"body": "Por favor, envía:\nNombre completo\nCorreo electrónico\nTeléfono\nFecha de nacimiento\nEdad"}
+                "text": {"body": "Por favor, envía tu nombre completo."}
             })
         elif message_body == "7":
             user_data["servicio"] = "7"
@@ -563,24 +602,69 @@ def process_user_message(phone_number, message_body):
             user_data["stage"] = "start"
             send_whatsapp_message(phone_number, WELCOME_MESSAGE)
         else:
-            user_data["stage"] = "datos_subsecuente"
+            user_data["servicio"] = message_body
+            user_data["stage"] = "esperando_nombre_sub"
             send_whatsapp_message(phone_number, {
                 "type": "text",
-                "text": {"body": "Por favor, envía:\nNombre completo\nCorreo electrónico\nTeléfono\nFecha de nacimiento\nEdad"}
+                "text": {"body": "Por favor, envía tu nombre completo."}
             })
 
-    elif user_data["stage"] == "datos_subsecuente":
-        extracted_data = extract_user_data(message_body)
-        user_info.update(extracted_data)
+    # --- Nuevos estados para pedir datos individualmente (Subsecuente) ---
+    elif user_data["stage"] == "esperando_nombre_sub":
+        user_info["nombre"] = message_body.strip()
         user_data_storage[phone_number] = user_info
-        user_data["stage"] = "mostrar_horarios_sub"
-        send_whatsapp_message(phone_number, HORARIOS_SUBSECUENTE)
+        user_data["stage"] = "esperando_telefono_sub"
         send_whatsapp_message(phone_number, {
             "type": "text",
-            "text": {"body": "Por favor, responde con la fecha y hora que prefieras (ej: 2025-04-05 10:00)"}
+            "text": {"body": "Gracias. Ahora, por favor, envía tu número de teléfono."}
         })
-        user_data["stage"] = "esperando_fecha_sub"
+    
+    elif user_data["stage"] == "esperando_telefono_sub":
+        user_info["telefono"] = message_body.strip()
+        user_data_storage[phone_number] = user_info
+        user_data["stage"] = "esperando_fecha_nacimiento_sub"
+        send_whatsapp_message(phone_number, {
+            "type": "text",
+            "text": {"body": "Por favor, envía tu fecha de nacimiento (DD-MM-AAAA)."}
+        })
 
+    elif user_data["stage"] == "esperando_fecha_nacimiento_sub":
+        user_info["fecha_nacimiento"] = message_body.strip()
+        user_data_storage[phone_number] = user_info
+        user_data["stage"] = "esperando_edad_sub"
+        send_whatsapp_message(phone_number, {
+            "type": "text",
+            "text": {"body": "Por último, ¿cuántos años tienes?"}
+        })
+
+    elif user_data["stage"] == "esperando_edad_sub":
+        user_info["edad"] = message_body.strip()
+        user_data_storage[phone_number] = user_info
+        user_data["stage"] = "esperando_correo_sub"
+        send_whatsapp_message(phone_number, {
+            "type": "text",
+            "text": {"body": "Gracias. Ahora, por favor, envíanos tu correo electrónico para enviarte la confirmación."}
+        })
+
+    elif user_data["stage"] == "esperando_correo_sub":
+        email_match = re.search(r'[\w\.-]+@[\w\.-]+\.\w+', message_body)
+        if email_match:
+            user_info["correo"] = email_match.group(0)
+            user_data_storage[phone_number] = user_info
+            user_data["stage"] = "mostrar_horarios_sub"
+            send_whatsapp_message(phone_number, HORARIOS_SUBSECUENTE)
+            send_whatsapp_message(phone_number, {
+                "type": "text",
+                "text": {"body": "Por favor, responde con la fecha y hora que prefieras (ej: 2025-04-05 10:00)"}
+            })
+            user_data["stage"] = "esperando_fecha_sub"
+        else:
+            send_whatsapp_message(phone_number, {
+                "type": "text",
+                "text": {"body": "El formato del correo es incorrecto. Por favor, inténtalo de nuevo."}
+            })
+    # --- Fin de nuevos estados (Subsecuente) ---
+    
     # === AGENDAR CITA (PRIMERA VEZ) ===
     elif user_data["stage"] == "esperando_fecha":
         try:
@@ -630,8 +714,11 @@ def process_user_message(phone_number, message_body):
                 }
             }
             send_whatsapp_message(phone_number, cita_detalle)
+            
+            # Limpiar el estado de conversación al finalizar el proceso
             del user_state[phone_number]
             del user_data_storage[phone_number]
+
         except ValueError:
             send_whatsapp_message(phone_number, {
                 "type": "text",
@@ -686,8 +773,11 @@ def process_user_message(phone_number, message_body):
                 }
             }
             send_whatsapp_message(phone_number, cita_detalle)
+            
+            # Limpiar el estado de conversación al finalizar el proceso
             del user_state[phone_number]
             del user_data_storage[phone_number]
+
         except ValueError:
             send_whatsapp_message(phone_number, {
                 "type": "text",
@@ -703,8 +793,8 @@ def process_user_message(phone_number, message_body):
                 "type": "text",
                 "text": {"body": "Conectando con América... Un miembro del equipo te contactará pronto."}
             })
+        user_data["stage"] = "start"
         send_whatsapp_message(phone_number, WELCOME_MESSAGE)
-        user_data["stage"] = "option_selected"
 
     # === FACTURACIÓN ===
     elif user_data["stage"] == "facturacion":
@@ -718,22 +808,21 @@ def process_user_message(phone_number, message_body):
                 "type": "text",
                 "text": {"body": "Para dudas de facturación, escribe a:\n📧 lcastillo@gbcasesoria.mx"}
             })
+        user_data["stage"] = "start"
         send_whatsapp_message(phone_number, WELCOME_MESSAGE)
-        user_data["stage"] = "option_selected"
 
     # === DUDAS ===
     elif user_data["stage"] == "dudas":
-        print(f"[DUDA] {phone_number}: {message_body}")
         send_whatsapp_message(phone_number, {
             "type": "text",
-            "text": {"body": "Hemos recibido tu consulta. Un miembro del equipo te responderá pronto."}
+            "text": {"body": "Para dudas o cancelaciones, puedes escribirnos a:\n📧 contacto@heyginemoni.com"}
         })
+        user_data["stage"] = "start"
         send_whatsapp_message(phone_number, WELCOME_MESSAGE)
-        user_data["stage"] = "option_selected"
 
     else:
+        user_data["stage"] = "start"
         send_whatsapp_message(phone_number, WELCOME_MESSAGE)
-        user_data["stage"] = "option_selected"
 
     user_state[phone_number] = user_data
 
