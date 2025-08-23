@@ -293,29 +293,27 @@ def crear_evento_google_calendar(resumen, inicio, duracion_minutos, descripcion)
         return None
 
 # === ENVÍO DE CORREO ===
-def send_appointment_email(recipient_email, patient_name, doctor_name, appointment_date, appointment_time):
+def send_appointment_email(recipient_email, clinic_email, patient_name, patient_phone, patient_dob, patient_age, doctor_name, appointment_date, appointment_time):
     if not all([EMAIL_ADDRESS, EMAIL_PASSWORD, recipient_email]):
         print("❌ Error: Faltan credenciales de correo o correo del destinatario.")
         return False
-    message = MIMEMultipart("alternative")
-    message["Subject"] = "Confirmación de Cita - Milkiin"
-    message["From"] = EMAIL_ADDRESS
-    message["To"] = recipient_email
-    text = f"""
+    
+    # Correo para el paciente
+    message_patient = MIMEMultipart("alternative")
+    message_patient["Subject"] = "Confirmación de Cita - Milkiin"
+    message_patient["From"] = EMAIL_ADDRESS
+    message_patient["To"] = recipient_email
+    text_patient = f"""
     Hola {patient_name},
-
     Tu cita con la Dra. {doctor_name} ha sido agendada con éxito.
-
     Detalles de la cita:
     Fecha: {appointment_date}
     Hora: {appointment_time}
-
-    Te esperamos en nuestras instalaciones. Si tienes alguna duda, responde a este correo.
-
+    Te esperamos en nuestras instalaciones.
     Saludos cordiales,
     El equipo de Milkiin
     """
-    html = f"""
+    html_patient = f"""
     <html>
       <body>
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
@@ -339,16 +337,38 @@ def send_appointment_email(recipient_email, patient_name, doctor_name, appointme
       </body>
     </html>
     """
-    part1 = MIMEText(text, "plain")
-    part2 = MIMEText(html, "html")
-    message.attach(part1)
-    message.attach(part2)
+    message_patient.attach(MIMEText(text_patient, "plain"))
+    message_patient.attach(MIMEText(html_patient, "html"))
+    
+    # Correo para la clínica
+    message_clinic = MIMEMultipart("alternative")
+    message_clinic["Subject"] = "NUEVA CITA AGENDADA"
+    message_clinic["From"] = EMAIL_ADDRESS
+    message_clinic["To"] = clinic_email
+    text_clinic = f"""
+    ¡Una nueva cita ha sido agendada!
+    
+    Detalles de la cita:
+    Servicio: Cita con Dra. {doctor_name}
+    Fecha: {appointment_date}
+    Hora: {appointment_time}
+    
+    Datos del paciente:
+    Nombre: {patient_name}
+    Teléfono: {patient_phone}
+    Fecha de Nacimiento: {patient_dob}
+    Edad: {patient_age} años
+    """
+    message_clinic.attach(MIMEText(text_clinic, "plain"))
+    
     context = ssl.create_default_context()
     try:
         with smtplib.SMTP_SSL(SMTP_SERVER, SMTP_PORT, context=context) as server:
             server.login(EMAIL_ADDRESS, EMAIL_PASSWORD)
-            server.sendmail(EMAIL_ADDRESS, recipient_email, message.as_string())
-            print(f"✅ Correo enviado a {recipient_email}")
+            server.sendmail(EMAIL_ADDRESS, recipient_email, message_patient.as_string())
+            print(f"✅ Correo de confirmación enviado a {recipient_email}")
+            server.sendmail(EMAIL_ADDRESS, clinic_email, message_clinic.as_string())
+            print(f"✅ Correo de notificación enviado a la clínica a {clinic_email}")
             return True
     except Exception as e:
         print(f"❌ Error al enviar correo: {e}")
@@ -396,7 +416,6 @@ def process_user_message(phone_number, message_body):
                 "type": "text",
                 "text": {"body": "Para el envío de resultados, envíalos al correo:\n📧 nicontacto@heyginemoni.com"}
             })
-            # Reinicia la conversación después de dar la información
             user_data["stage"] = "start"
             send_whatsapp_message(phone_number, WELCOME_MESSAGE)
         elif message_body == "6":
@@ -641,14 +660,17 @@ def process_user_message(phone_number, message_body):
                 descripcion=f"Paciente: {nombre_paciente}\nTeléfono: {phone_number}\nServicio: {servicio_nombre}\nEspecialista: {especialista_nombre}"
             )
 
-            if user_info.get('correo'):
-                send_appointment_email(
-                    user_info['correo'],
-                    nombre_paciente,
-                    especialista_nombre,
-                    fecha_hora.strftime("%Y-%m-%d"),
-                    fecha_hora.strftime("%H:%M")
-                )
+            send_appointment_email(
+                user_info.get('correo'),
+                "milkiin.gine@gmail.com",
+                nombre_paciente,
+                user_info.get('telefono'),
+                user_info.get('fecha_nacimiento'),
+                user_info.get('edad'),
+                especialista_nombre,
+                fecha_hora.strftime("%Y-%m-%d"),
+                fecha_hora.strftime("%H:%M")
+            )
 
             try:
                 ics_path = generar_archivo_ics(
@@ -705,14 +727,17 @@ def process_user_message(phone_number, message_body):
                 descripcion=f"Paciente: {nombre_paciente}\nTeléfono: {phone_number}\nServicio: {servicio_nombre}"
             )
 
-            if user_info.get('correo'):
-                send_appointment_email(
-                    user_info['correo'],
-                    nombre_paciente,
-                    especialista_nombre,
-                    fecha_hora.strftime("%Y-%m-%d"),
-                    fecha_hora.strftime("%H:%M")
-                )
+            send_appointment_email(
+                user_info.get('correo'),
+                "milkiin.gine@gmail.com",
+                nombre_paciente,
+                user_info.get('telefono'),
+                user_info.get('fecha_nacimiento'),
+                user_info.get('edad'),
+                especialista_nombre,
+                fecha_hora.strftime("%Y-%m-%d"),
+                fecha_hora.strftime("%H:%M")
+            )
 
             try:
                 ics_path = generar_archivo_ics(
