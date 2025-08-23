@@ -293,7 +293,7 @@ def crear_evento_google_calendar(resumen, inicio, duracion_minutos, descripcion)
         return None
 
 # === ENVÍO DE CORREO ===
-def send_appointment_email(recipient_email, clinic_email, patient_name, patient_phone, patient_dob, patient_age, doctor_name, appointment_date, appointment_time):
+def send_appointment_email(recipient_email, clinic_email, service_name, patient_name, patient_phone, patient_dob, patient_age, doctor_name, appointment_date, appointment_time):
     if not all([EMAIL_ADDRESS, EMAIL_PASSWORD]):
         print("❌ Error: Faltan credenciales de correo.")
         return False
@@ -350,7 +350,7 @@ def send_appointment_email(recipient_email, clinic_email, patient_name, patient_
     ¡Una nueva cita ha sido agendada!
     
     Detalles de la cita:
-    Servicio: Cita con Dra. {doctor_name}
+    Servicio: {service_name}
     Fecha: {appointment_date}
     Hora: {appointment_time}
     
@@ -659,12 +659,13 @@ def process_user_message(phone_number, message_body):
                 resumen=f"Cita - {servicio_nombre} con {especialista_nombre}",
                 inicio=fecha_hora,
                 duracion_minutos=duracion,
-                descripcion=f"Paciente: {nombre_paciente}\nTeléfono: {phone_number}\nServicio: {servicio_nombre}\nEspecialista: {especialista_nombre}"
+                descripcion=f"Paciente: {nombre_paciente}\nTeléfono: {user_info.get('telefono', 'No proporcionado')}\nServicio: {servicio_nombre}\nEspecialista: {especialista_nombre}"
             )
 
             send_appointment_email(
                 user_info.get('correo'),
                 EMAIL_ADDRESS,
+                servicio_nombre,
                 nombre_paciente,
                 user_info.get('telefono'),
                 user_info.get('fecha_nacimiento'),
@@ -726,12 +727,13 @@ def process_user_message(phone_number, message_body):
                 resumen=f"Cita - {servicio_nombre} (Subsecuente)",
                 inicio=fecha_hora,
                 duracion_minutos=duracion,
-                descripcion=f"Paciente: {nombre_paciente}\nTeléfono: {phone_number}\nServicio: {servicio_nombre}"
+                descripcion=f"Paciente: {nombre_paciente}\nTeléfono: {user_info.get('telefono', 'No proporcionado')}\nServicio: {servicio_nombre}"
             )
 
             send_appointment_email(
                 user_info.get('correo'),
                 EMAIL_ADDRESS,
+                servicio_nombre,
                 nombre_paciente,
                 user_info.get('telefono'),
                 user_info.get('fecha_nacimiento'),
