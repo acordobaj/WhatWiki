@@ -263,50 +263,6 @@ Paciente: {nombre_paciente}
     temp_file.close()
     return temp_file.name
 
-# === ENVIAR .ICS POR WHATSAPP ===
-def send_whatsapp_document(phone_number, file_path, caption="📅 Tu cita ha sido agendada. Adjunto está el archivo para agregarla a tu calendario."):
-    try:
-        formatted_phone = format_phone_number(phone_number)
-        media_upload_url = f"https://graph.facebook.com/v22.0/{META_PHONE_NUMBER_ID}/media"
-        headers = {'Authorization': f'Bearer {META_ACCESS_TOKEN}'}
-        with open(file_path, 'rb') as f:
-            files = {
-                'file': (os.path.basename(file_path), f, 'text/calendar')
-            }
-            data = {
-                'messaging_product': 'whatsapp',
-                'type': 'document'
-            }
-            response_upload = requests.post(media_upload_url, headers=headers, files=files, data=data)
-        if response_upload.status_code != 200:
-            print(f"❌ Error al subir archivo .ics: {response_upload.text}")
-            return False
-        media_id = response_upload.json().get('id')
-        if not media_id:
-            print("❌ No se recibió media_id después de subir el archivo.")
-            return False
-        send_url = f"https://graph.facebook.com/v22.0/{META_PHONE_NUMBER_ID}/messages"
-        payload = {
-            "messaging_product": "whatsapp",
-            "to": formatted_phone,
-            "type": "document",
-            "document": {
-                "id": media_id,
-                "filename": "cita_milkiin.ics",
-                "caption": caption
-            }
-        }
-        send_response = requests.post(send_url, headers=headers, json=payload)
-        if send_response.status_code == 200:
-            print("✅ Archivo .ics enviado por WhatsApp.")
-            return True
-        else:
-            print(f"❌ Error al enviar documento por WhatsApp: {send_response.text}")
-            return False
-    except Exception as e:
-        print(f"❌ Error en send_whatsapp_document: {e}")
-        return False
-
 # === GOOGLE CALENDAR ===
 def crear_evento_google_calendar(resumen, inicio, duracion_minutos, descripcion):
     try:
@@ -702,10 +658,15 @@ def process_user_message(phone_number, message_body):
                     fecha_hora=fecha_hora,
                     duracion_minutos=duracion
                 )
-                send_whatsapp_document(phone_number, ics_path)
+                with open(ics_path, 'r', encoding='utf-8') as f:
+                    ics_content = f.read()
+                
+                ics_message = f"📅 Tu cita ha sido agendada. Debido a las limitaciones de WhatsApp, no podemos enviarte el archivo directamente. Por favor, copia el siguiente texto y pégalo en tu aplicación de calendario para crear el evento:\n\n```\n{ics_content}\n```"
+                send_whatsapp_message(phone_number, {"type": "text", "text": {"body": ics_message}})
+                
                 os.unlink(ics_path)
             except Exception as e:
-                print(f"⚠️ No se pudo enviar .ics: {e}")
+                print(f"⚠️ No se pudo enviar el contenido del .ics: {e}")
 
             send_whatsapp_message(phone_number, CONFIRMACION)
             cita_detalle = {
@@ -761,10 +722,15 @@ def process_user_message(phone_number, message_body):
                     fecha_hora=fecha_hora,
                     duracion_minutos=duracion
                 )
-                send_whatsapp_document(phone_number, ics_path)
+                with open(ics_path, 'r', encoding='utf-8') as f:
+                    ics_content = f.read()
+
+                ics_message = f"📅 Tu cita ha sido agendada. Debido a las limitaciones de WhatsApp, no podemos enviarte el archivo directamente. Por favor, copia el siguiente texto y pégalo en tu aplicación de calendario para crear el evento:\n\n```\n{ics_content}\n```"
+                send_whatsapp_message(phone_number, {"type": "text", "text": {"body": ics_message}})
+                
                 os.unlink(ics_path)
             except Exception as e:
-                print(f"⚠️ No se pudo enviar .ics: {e}")
+                print(f"⚠️ No se pudo enviar el contenido del .ics: {e}")
 
             send_whatsapp_message(phone_number, CONFIRMACION)
             cita_detalle = {
