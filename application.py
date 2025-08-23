@@ -320,7 +320,7 @@ def send_appointment_email(recipient_email, clinic_email, service_name, patient_
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
               <h2 style="color: #4CAF50;">✅ Cita Confirmada</h2>
               <p>Hola <strong>{patient_name}</strong>,</p>
-              <p>Tu cita con la <strong>Dra. {doctor_name}</strong> ha sido agendada con éxito.</p>
+              <p>Tu cita con la <strong>{doctor_name}</strong> ha sido agendada con éxito.</p>
               <p>Aquí están los detalles de tu cita:</p>
               <ul>
                 <li><strong>Fecha:</strong> {appointment_date}</li>
