@@ -30,13 +30,16 @@ META_VERIFY_TOKEN = os.environ.get('META_VERIFY_TOKEN') or 'milkiin_verify_token
 # Variables para Google Calendar
 GOOGLE_CALENDAR_CREDENTIALS_JSON = os.environ.get('GOOGLE_CALENDAR_CREDENTIALS')
 GOOGLE_CALENDAR_ID = os.environ.get('GOOGLE_CALENDAR_ID')
-SCOPES = ['https://www.googleapis.com/auth/calendar.events']
+SCOPES = ['https://www.googleapis.com/auth/calendar.events']  # Corregido: sin espacios extra
 
 # === CONFIGURACIÓN DE CORREO ELECTRÓNICO ===
 EMAIL_ADDRESS = os.environ.get('EMAIL_ADDRESS')
 EMAIL_PASSWORD = os.environ.get('EMAIL_PASSWORD')
 SMTP_SERVER = 'smtp.gmail.com'
 SMTP_PORT = 465
+
+# === TOKEN DE SEGURIDAD PARA RECORDATORIOS (opcional) ===
+REMINDER_TOKEN = os.environ.get('REMINDER_TOKEN')  # Define este en Render
 
 # === AUTENTICACIÓN Y SERVICIO DE CALENDAR ===
 def get_calendar_service():
@@ -655,11 +658,19 @@ def process_user_message(phone_number, message_body):
             especialista_nombre = ESPECIALISTAS_NOMBRES.get(especialista_key, "No definido")
             nombre_paciente = user_info.get('nombre', 'Paciente Anónimo')
 
+            # Descripción con datos del paciente
+            descripcion = f"""
+Paciente: {nombre_paciente}
+Teléfono: {user_info.get('telefono', 'No proporcionado')}
+Servicio: {servicio_nombre}
+Especialista: {especialista_nombre}
+            """.strip()
+
             crear_evento_google_calendar(
                 resumen=f"Cita - {servicio_nombre} con {especialista_nombre}",
                 inicio=fecha_hora,
                 duracion_minutos=duracion,
-                descripcion=f"Paciente: {nombre_paciente}\nTeléfono: {user_info.get('telefono', 'No proporcionado')}\nServicio: {servicio_nombre}\nEspecialista: {especialista_nombre}"
+                descripcion=descripcion
             )
 
             send_appointment_email(
@@ -723,11 +734,17 @@ def process_user_message(phone_number, message_body):
             nombre_paciente = user_info.get('nombre', 'Paciente Anónimo')
             especialista_nombre = "Por definir"
 
+            descripcion = f"""
+Paciente: {nombre_paciente}
+Teléfono: {user_info.get('telefono', 'No proporcionado')}
+Servicio: {servicio_nombre}
+            """.strip()
+
             crear_evento_google_calendar(
                 resumen=f"Cita - {servicio_nombre} (Subsecuente)",
                 inicio=fecha_hora,
                 duracion_minutos=duracion,
-                descripcion=f"Paciente: {nombre_paciente}\nTeléfono: {user_info.get('telefono', 'No proporcionado')}\nServicio: {servicio_nombre}"
+                descripcion=descripcion
             )
 
             send_appointment_email(
@@ -822,6 +839,7 @@ def process_user_message(phone_number, message_body):
 
     user_state[phone_number] = user_data
 
+
 # === WEBHOOKS ===
 @application.route('/webhook/', methods=['GET', 'POST'])
 def webhook():
@@ -851,6 +869,114 @@ def webhook():
         except Exception as e:
             print(f"❌ Error en webhook: {e}")
             return 'Error', 500
+
+# === ENDPOINT PARA RECORDATORIOS DIARIOS ===
+@application.route('/send-reminders', methods=['GET'])
+def send_reminders():
+    # Verificar token de seguridad
+    if REMINDER_TOKEN and request.args.get('token') != REMINDER_TOKEN:
+        return jsonify({"error": "Acceso no autorizado"}), 403
+
+    try:
+        service = get_calendar_service()
+        if not service:
+            return jsonify({"error": "No se pudo conectar al servicio de Google Calendar"}), 500
+
+        # Obtener eventos de mañana
+        tomorrow = datetime.now() + timedelta(days=1)
+        start_of_day = tomorrow.replace(hour=0, minute=0, second=0, microsecond=0)
+        end_of_day = tomorrow.replace(hour=23, minute=59, second=59, microsecond=999)
+
+        time_min = start_of_day.isoformat() + 'Z'
+        time_max = end_of_day.isoformat() + 'Z'
+
+        events_result = service.events().list(
+            calendarId=GOOGLE_CALENDAR_ID,
+            timeMin=time_min,
+            timeMax=time_max,
+            singleEvents=True,
+            orderBy='startTime'
+        ).execute()
+
+        events = events_result.get('items', [])
+        reminders_sent = []
+
+        for event in events:
+            summary = event.get('summary', 'Cita')
+            start_time = event['start'].get('dateTime', event['start'].get('date'))
+            description = event.get('description', '')
+
+            # Extraer datos del paciente
+            phone_match = re.search(r'Teléfono:\s*(\+?\d+)', description)
+            name_match = re.search(r'Paciente:\s*([^\n]+)', description)
+            service_match = re.search(r'Servicio:\s*([^\n]+)', description)
+
+            patient_name = name_match.group(1).strip() if name_match else "Paciente"
+            phone_number = phone_match.group(1).strip() if phone_match else None
+            service_name = service_match.group(1).strip() if service_match else "tu cita"
+
+            if not phone_number:
+                continue
+
+            # Formatear hora
+            try:
+                event_datetime = datetime.fromisoformat(start_time.replace('Z', '+00:00')).astimezone()
+                formatted_time = event_datetime.strftime("%H:%M")
+                formatted_date = event_datetime.strftime("%d de %B")
+            except:
+                formatted_time = "la hora programada"
+                formatted_date = "mañana"
+
+            # Mensaje de recordatorio
+            reminder_message = {
+                "type": "text",
+                "text": {
+                    "body": f"""
+📅 *Recordatorio de Cita* – Milkiin ❤️
+
+Hola {patient_name},
+
+Te recordamos tu cita programada para mañana, *{formatted_date}* a las *{formatted_time}* hrs.
+
+🔹 Servicio: {service_name}
+📍 Insurgentes Sur 1160, 6º piso, Colonia Del Valle
+🗺️ [Ubicación en Google Maps](https://maps.app.goo.gl/VfWbVgwHLQrZPNrNA)
+
+⏰ Por favor, llega 10 minutos antes.
+💳 Aceptamos tarjeta (AMEX incluida) y efectivo.
+
+Si necesitas reagendar o cancelar, por favor avísanos con al menos 72 horas de anticipación.
+
+¡Te esperamos con cariño! 💕
+                    """.strip()
+                }
+            }
+
+            response = send_whatsapp_message(phone_number, reminder_message)
+            if response:
+                reminders_sent.append({
+                    "phone": phone_number,
+                    "name": patient_name,
+                    "event": summary,
+                    "status": "sent"
+                })
+            else:
+                reminders_sent.append({
+                    "phone": phone_number,
+                    "name": patient_name,
+                    "event": summary,
+                    "status": "failed"
+                })
+
+        return jsonify({
+            "message": f"Recordatorios procesados: {len(reminders_sent)}",
+            "details": reminders_sent
+        }), 200
+
+    except Exception as e:
+        print(f"❌ Error al enviar recordatorios: {e}")
+        return jsonify({"error": str(e)}), 500
+
 
 @application.route('/')
 def home():
